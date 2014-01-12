@@ -1,7 +1,7 @@
 /*
 This code for the Joystick of the supercaster cart.
 Communication Stream (Serial):
-(State MSB)(State LSB)S(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
+(Emergency Stop)E(State MSB)(State LSB)S(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
  State:
 	00: Remote, close turn
 	01: Remote, tight turn
@@ -23,6 +23,7 @@ Communication Stream (Serial):
 #define PIN_HORZ_ANALOG 0
 #define PIN_VERT_ANALOG 1
 
+#define PIN_ESTOP 40
 #define PIN_ANGLE_POT A7
 #define PIN_TRANSMIT_TOGGLE PIN_RIGHT_BUTTON
 #define PIN_TURN_TOGGLE PIN_LEFT_BUTTON
@@ -47,6 +48,7 @@ void setup(){
   pinMode(PIN_LED_POWER, OUTPUT);
   pinMode(PIN_LED_TRANSMIT, OUTPUT);
   
+  pinMode(PIN_ESTOP,INPUT_PULLUP);
   pinMode(PIN_TRANSMIT_TOGGLE, INPUT_PULLUP);
   pinMode(PIN_TURN_TOGGLE, INPUT_PULLUP);
 }
@@ -60,6 +62,8 @@ void loop(){
   Transmit = digitalRead(PIN_TRANSMIT_TOGGLE);
 
   if (Transmit==0) {
+    Serial.print(digitalRead(PIN_ESTOP));
+    Serial.print('E');
     Serial.print(Transmit);
     Serial.print(digitalRead(PIN_TURN_TOGGLE));
     Serial.print('S');
@@ -81,7 +85,7 @@ void loop(){
   lcd.print("V:");
   lcd.print( Vert);
   lcd.print("  ");
-  if (!digitalRead(PIN_TRANSMIT_TOGGLE)){
+  if (!Transmit)){
     digitalWrite(PIN_LED_TRANSMIT,HIGH);
   }else{
     digitalWrite(PIN_LED_TRANSMIT,LOW);
