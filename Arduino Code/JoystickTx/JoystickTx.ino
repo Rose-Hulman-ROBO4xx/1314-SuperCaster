@@ -6,11 +6,10 @@
 #define PIN_LED_6 69
 #define PIN_RIGHT_BUTTON 2
 #define PIN_LEFT_BUTTON 3
-#define PIN_SELECT_BUTTON 21
+#define PIN_SELECT_BUTTON 24
 #define PIN_CONTRAST_ANALOG 8
 #define PIN_HORZ_ANALOG 0
 #define PIN_VERT_ANALOG 1
-#define PIN_SELECT_BUTTON 21
 #define PIN_HORZ_ANALOG 0
 #define PIN_VERT_ANALOG 1
 #include <LiquidCrystal.h>
