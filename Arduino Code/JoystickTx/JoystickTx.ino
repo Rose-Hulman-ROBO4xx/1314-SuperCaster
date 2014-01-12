@@ -1,12 +1,8 @@
 /*
 This code for the Joystick of the supercaster cart.
 Communication Stream (Serial):
-(Emergency Stop)E(State MSB)(State LSB)S(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
- State:
-	00: Remote, close turn
-	01: Remote, tight turn
-	10: Tracking
-	11: Tracking
+(Emergency Stop)E(Transmit)S(Tight Turn)T(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
+
 */
 
 #define PIN_LED_1 64
@@ -64,9 +60,10 @@ void loop(){
   if (Transmit==0) {
     Serial.print(digitalRead(PIN_ESTOP));
     Serial.print('E');
-    Serial.print(Transmit);
-    Serial.print(digitalRead(PIN_TURN_TOGGLE));
+    Serial.print(Transmit);    
     Serial.print('S');
+    Serial.print(digitalRead(PIN_TURN_TOGGLE));
+    Serial.print('T');
     Serial.print(Horz);
     Serial.print('H');
     Serial.print(Vert);

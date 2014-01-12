@@ -17,10 +17,16 @@ boolean stringComplete = false;
 String Horz = "";
 String Vert = "";
 String S = "";
+String Angle = "";
+String E = "";
+String T = "";
 int i = 0;
 int Horzi = 0;
 int Verti = 0;
 int Si = 0;
+int Ti = 0;
+int Ei = 0;
+int Anglei = 0;
 
 void setup(){  
   Serial.begin(9600);
@@ -57,9 +63,13 @@ void loop(){
     Serial.println(Horz);
     Serial.println(Vert);
     
+    Ei = StringToInt(E);
+    Ti = StringToInt(T);
     Si = StringToInt(S);
     Horzi = StringToInt(Horz);
     Verti = StringToInt(Vert);
+    Anglei = StringToInt(Angle);
+    
     
     if(Verti > FWD_LIMIT){
       Serial.println("Forward");
@@ -94,17 +104,25 @@ void serialEvent(){
   digitalWrite(LED_RECIEVE,HIGH);
   while(Serial.available()){
     char inChar = (char) Serial.read();
-    if(inChar=='V'){
-      Vert = inputString;
+    if(inChar =='A'){
+      Angle = inputString;
       inputString = "";
       stringComplete = true;
+    else if(inChar=='V'){
+      Vert = inputString;
+      inputString = "";
     }else if(inChar =='H'){
       Horz = inputString;
+      inputString = "";
+    }else if(inChar =='T'){
+      T = inputString;
       inputString = "";
     }else if(inChar =='S'){
       S = inputString;
       inputString = "";
-    }
+    }else if(inChar =='E'){
+      E = inputString;
+      inputString = "";
     else{
       inputString += inChar;
     }
