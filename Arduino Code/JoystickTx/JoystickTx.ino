@@ -1,23 +1,40 @@
+/*
+This code for the Joystick of the supercaster cart.
+Communication Stream (Serial):
+(State MSB)(State LSB)S(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
+ State:
+	00: Remote, close turn
+	01: Remote, tight turn
+	10: Tracking
+	11: Tracking
+*/
+
 #define PIN_LED_1 64
 #define PIN_LED_2 65
 #define PIN_LED_3 66
-#define PIN_LED_4 67
-#define PIN_LED_5 68
-#define PIN_LED_6 69
+#define PIN_LED_TURN 67 //led 4
+#define PIN_LED_POWER 68 //led 5
+#define PIN_LED_TRANSMIT 69 //led 6
+
 #define PIN_RIGHT_BUTTON 2
 #define PIN_LEFT_BUTTON 3
-#define PIN_SELECT_BUTTON 24
+
 #define PIN_CONTRAST_ANALOG 8
 #define PIN_HORZ_ANALOG 0
 #define PIN_VERT_ANALOG 1
-#define PIN_HORZ_ANALOG 0
-#define PIN_VERT_ANALOG 1
+
+#define PIN_ANGLE_POT A7
+#define PIN_TRANSMIT_TOGGLE PIN_RIGHT_BUTTON
+#define PIN_TURN_TOGGLE PIN_LEFT_BUTTON
+
 #include <LiquidCrystal.h>
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(14, 15, 16, 17, 18, 19, 20);
 int Horz;
 int Vert;
+int Angle;
+int Transmit;
 
 void setup(){
   Serial.begin(9600);
@@ -26,28 +43,33 @@ void setup(){
   pinMode(PIN_LED_1, OUTPUT);
   pinMode(PIN_LED_2, OUTPUT);
   pinMode(PIN_LED_3, OUTPUT);
-  pinMode(PIN_LED_4, OUTPUT);
-  pinMode(PIN_LED_5, OUTPUT);
-  pinMode(PIN_LED_6, OUTPUT);
-  pinMode(PIN_SELECT_BUTTON, INPUT_PULLUP);
-  pinMode(PIN_LEFT_BUTTON, INPUT_PULLUP);
-  pinMode(PIN_RIGHT_BUTTON, INPUT_PULLUP);
+  pinMode(PIN_LED_TURN, OUTPUT);
+  pinMode(PIN_LED_POWER, OUTPUT);
+  pinMode(PIN_LED_TRANSMIT, OUTPUT);
+  
+  pinMode(PIN_TRANSMIT_TOGGLE, INPUT_PULLUP);
+  pinMode(PIN_TURN_TOGGLE, INPUT_PULLUP);
 }
 
 void loop(){
-  digitalWrite(PIN_LED_5,HIGH);
+  digitalWrite(PIN_LED_POWER,HIGH);
+  
   Horz = analogRead(PIN_HORZ_ANALOG);
   Vert = analogRead(PIN_VERT_ANALOG);
+  Angle = analogRead(PIN_ANGLE_POT);
+  Transmit = digitalRead(PIN_TRANSMIT_TOGGLE);
 
-  if (digitalRead(PIN_RIGHT_BUTTON) == 0) {
-    Serial.print(digitalRead(PIN_LEFT_BUTTON));
+  if (Transmit==0) {
+    Serial.print(Transmit);
+    Serial.print(digitalRead(PIN_TURN_TOGGLE));
     Serial.print('S');
     Serial.print(Horz);
     Serial.print('H');
     Serial.print(Vert);
     Serial.print('V');
+    Serial.print(Angle);
+    Serial.print('A');
   }  
-  //Serial.print('HV');
   
   lcd.setCursor(0,0);
   lcd.print("Tranciever");
@@ -59,21 +81,16 @@ void loop(){
   lcd.print("V:");
   lcd.print( Vert);
   lcd.print("  ");
-  if (!digitalRead(PIN_SELECT_BUTTON)){
-    digitalWrite(PIN_LED_2,HIGH);
+  if (!digitalRead(PIN_TRANSMIT_TOGGLE)){
+    digitalWrite(PIN_LED_TRANSMIT,HIGH);
   }else{
-    digitalWrite(PIN_LED_2,LOW);
+    digitalWrite(PIN_LED_TRANSMIT,LOW);
   }
   if (!digitalRead(PIN_LEFT_BUTTON)){
-    digitalWrite(PIN_LED_4,HIGH);
+    digitalWrite(PIN_LED_TURN,HIGH);
   }else{
-    digitalWrite(PIN_LED_4,LOW);
+    digitalWrite(PIN_LED_TURN,LOW);
   }
-  if (!digitalRead(PIN_RIGHT_BUTTON)){
-    digitalWrite(PIN_LED_6,HIGH);
-  }else{
-    digitalWrite(PIN_LED_6,LOW);
-  }  
   delay(100);
 }
     
