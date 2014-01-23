@@ -58,7 +58,8 @@ void loop(){
   Transmit = digitalRead(PIN_TRANSMIT_TOGGLE);
 
   if (Transmit==0) {
-    Serial.print(digitalRead(PIN_ESTOP));
+    //Serial.print(digitalRead(PIN_ESTOP));
+    Serial.print(0);
     Serial.print('E');
     Serial.print(Transmit);    
     Serial.print('S');
