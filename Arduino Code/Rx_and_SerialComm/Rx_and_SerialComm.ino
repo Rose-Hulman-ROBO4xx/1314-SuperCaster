@@ -100,9 +100,6 @@ void loop(){
      } else {
        digitalWrite(LED_TEST,LOW);
      }
-      
-   
-    
     inputString = "";
     stringComplete = false;
   }
