@@ -36,6 +36,8 @@ int Transmit;
 void setup(){
   Serial.begin(9600);
   lcd.begin(16, 2);
+  lcd.setCursor(0,0);
+  lcd.print("Tx");
   analogReference(DEFAULT);
   pinMode(PIN_LED_1, OUTPUT);
   pinMode(PIN_LED_2, OUTPUT);
@@ -60,17 +62,17 @@ void loop(){
   if (Transmit==0) {
     //Serial.print(digitalRead(PIN_ESTOP));
     Serial.print(0);
-    Serial.print('E');
-    Serial.print(Transmit);    
+    //Serial.print('E');
+    //Serial.print(Transmit);    
     Serial.print('S');
-    Serial.print(digitalRead(PIN_TURN_TOGGLE));
-    Serial.print('T');
+    //Serial.print(digitalRead(PIN_TURN_TOGGLE));
+    //Serial.print('T');
     Serial.print(Horz);
     Serial.print('H');
     Serial.print(Vert);
     Serial.print('V');
-    Serial.print(Angle);
-    Serial.print('A');
+    //Serial.print(Angle);
+    //Serial.print('A');
   }  
   
   lcd.setCursor(0,0);
@@ -83,7 +85,7 @@ void loop(){
   lcd.print("V:");
   lcd.print( Vert);
   lcd.print("  ");
-  if (!Transmit)){
+  if (!Transmit){
     digitalWrite(PIN_LED_TRANSMIT,HIGH);
   }else{
     digitalWrite(PIN_LED_TRANSMIT,LOW);
@@ -93,6 +95,6 @@ void loop(){
   }else{
     digitalWrite(PIN_LED_TURN,LOW);
   }
-  delay(100);
+  delay(10);
 }
     

@@ -108,7 +108,7 @@ void serialEvent(){
       Angle = inputString;
       inputString = "";
       stringComplete = true;
-    else if(inChar=='V'){
+    }else if(inChar=='V'){
       Vert = inputString;
       inputString = "";
     }else if(inChar =='H'){
@@ -123,7 +123,7 @@ void serialEvent(){
     }else if(inChar =='E'){
       E = inputString;
       inputString = "";
-    else{
+    }else{
       inputString += inChar;
     }
   }
