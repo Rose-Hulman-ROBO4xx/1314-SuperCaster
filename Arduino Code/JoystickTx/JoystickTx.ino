@@ -1,8 +1,8 @@
 /*
 This code for the Joystick of the supercaster cart.
 Communication Stream (Serial):
-(Emergency Stop)E(Transmit)S(Tight Turn)T(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
-
+(Emergency Stop)E[[[(Transmit)S]]](Tight Turn)T(Joystick Horizontal)H(Joystick Vertical)V(Caster Angle)A
+ex: OEOT512H512V512A
 */
 
 #define PIN_LED_1 64
@@ -15,11 +15,11 @@ Communication Stream (Serial):
 #define PIN_RIGHT_BUTTON 2
 #define PIN_LEFT_BUTTON 3
 
-#define PIN_CONTRAST_ANALOG 8
+#define PIN_CONTRAST_ANALOG A8
 #define PIN_HORZ_ANALOG 0
 #define PIN_VERT_ANALOG 1
 
-#define PIN_ESTOP 40
+#define PIN_ESTOP 48
 #define PIN_ANGLE_POT A7
 #define PIN_TRANSMIT_TOGGLE PIN_RIGHT_BUTTON
 #define PIN_TURN_TOGGLE PIN_LEFT_BUTTON
@@ -62,17 +62,17 @@ void loop(){
   if (Transmit==0) {
     //Serial.print(digitalRead(PIN_ESTOP));
     Serial.print(0);
-    //Serial.print('E');
+    Serial.print('E');
     //Serial.print(Transmit);    
-    Serial.print('S');
-    //Serial.print(digitalRead(PIN_TURN_TOGGLE));
-    //Serial.print('T');
+    //Serial.print('S');
+    Serial.print(digitalRead(PIN_TURN_TOGGLE));
+    Serial.print('T');
     Serial.print(Horz);
     Serial.print('H');
     Serial.print(Vert);
     Serial.print('V');
-    //Serial.print(Angle);
-    //Serial.print('A');
+    Serial.print(Angle);
+    Serial.print('A');
   }  
   
   lcd.setCursor(0,0);

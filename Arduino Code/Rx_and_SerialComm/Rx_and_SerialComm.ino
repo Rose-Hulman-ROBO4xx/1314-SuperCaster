@@ -6,13 +6,13 @@
 #define LED_TEST 22
 
 #define FWD_ANG 90
-
 #define FWD_LIMIT 712
 #define BWD_LIMIT 312
-#define LEFT_TURN_LIMIT 112
-#define RIGHT_TURN_LIMIT 912
-#define TURN_SPD 1024 //Remember: 0 = full back, 512 = stop, 1024 = full fwd
-#define MAX_SPD 1024
+#define LEFT_TURN_LIMIT 1000
+#define RIGHT_TURN_LIMIT 20
+
+#define MAX_SPD  768
+#define TURN_SPD  MAX_SPD
 #define STOP_SPD 512
 
 LiquidCrystal lcd(14,15,16,17,18,19,20);
@@ -22,7 +22,7 @@ boolean stringComplete = false;
 String Horz = "";
 String Vert = "";
 String S = "";
-String Angle = "";
+String Ang = "";
 String E = "";
 String T = "";
 int i = 0;
@@ -55,10 +55,12 @@ void setup(){
 void loop(){
   //stringComplete = true;
   if(stringComplete){
+    //Serial.print("Message recieved");
+    
     lcd.setCursor(0,0);
     lcd.print("                 ");
     lcd.setCursor(0,0);
-    lcd.print(Angle);
+    lcd.print(Ang);
     lcd.print(" ");
     lcd.print(Horz);
     lcd.print(" ");
@@ -71,21 +73,30 @@ void loop(){
     lcd.print(Ti);
     lcd.print(" ");
     lcd.print(Si);
-    //Serial.println(S);
-    //Serial.println(Horz);
-    //Serial.println(Vert);
     
     Ei = StringToInt(E);
     Ti = StringToInt(T);
     Si = StringToInt(S);
     Horzi = StringToInt(Horz);
     Verti = StringToInt(Vert);
-    Anglei = StringToInt(Angle);
-    Anglei = Anglei*360/1024;
+    Verti = Verti * (MAX_SPD/1024);
+    Anglei = StringToInt(Ang);
+    Anglei = Anglei*0.352;
     
-    //DEBUG ONLY: SET E-STOP TO OFF
-    /*
-    if (Verti > 1024){
+        //DEBUG ONLY: SET E-STOP TO OFF
+    
+    Serial.print(Ei);
+    Serial.print('E');
+    Serial.print(Ti);
+    Serial.print('T');
+    Serial.print(Horzi);
+    Serial.print('H');
+    Serial.print(Verti);
+    Serial.print('V');
+    Serial.print(Anglei);
+    Serial.print('A');
+
+    /*if (Verti > 1024){
       Verti = 0;
     }
     Ei = 0;
@@ -98,14 +109,20 @@ void loop(){
       //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
       if(Verti < FWD_LIMIT){
         if(Verti > BWD_LIMIT){
-          if(Horzi < LEFT_TURN_LIMIT){
+          if(Horzi > LEFT_TURN_LIMIT){
               RightPICSendSerial(Anglei, TURN_SPD);
               LeftPICSendSerial(Anglei, (STOP_SPD));
-          }else if(Horzi > RIGHT_TURN_LIMIT){
+          }else if(Horzi < RIGHT_TURN_LIMIT){
               LeftPICSendSerial(Anglei, TURN_SPD);
-              RightPICSendSerial(Anglei, (STOP_SPD));
-          }
-        }
+              RightPICSendSerial(Anglei, (STOP_SPD));          
+          }else{
+            LeftPICSendSerial(Anglei, Verti);
+            RightPICSendSerial(Anglei, Verti);  
+          }  
+        }else{
+            LeftPICSendSerial(Anglei, Verti);
+            RightPICSendSerial(Anglei, Verti);  
+        }    
       }else{
         LeftPICSendSerial(Anglei, Verti);
         RightPICSendSerial(Anglei, Verti);      
@@ -131,11 +148,11 @@ void serialEvent(){
   digitalWrite(LED_RECIEVE,HIGH);
   while(Serial.available()){
     char inChar = (char) Serial.read();
-    if(inChar =='A'){
-      Angle = inputString;
+    if(inChar=='A'){
+      Ang = inputString;
       inputString = "";
       stringComplete = true;
-    }else if(inChar=='V'){
+    }else if(inChar =='V'){
       Vert = inputString;
       inputString = "";
     }else if(inChar =='H'){
@@ -157,6 +174,7 @@ void serialEvent(){
   digitalWrite(LED_RECIEVE,LOW);
 }
 void LeftPICSendSerial(int angle, int spd){
+      Serial.print("Sending to left PIC\n");
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -167,6 +185,7 @@ void LeftPICSendSerial(int angle, int spd){
       return;
 }
 void RightPICSendSerial(int angle, int spd){
+      Serial.print("Sending to right PIC\n");
       Serial2.print(angle);
       delay(15);
       Serial2.print('A');
