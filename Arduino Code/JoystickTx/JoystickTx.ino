@@ -74,9 +74,14 @@ void loop(){
     Serial.print(Angle);
     Serial.print('A');
   }  
-  
   lcd.setCursor(0,0);
-  lcd.print("Tranciever");
+  lcd.print("                    ");
+  lcd.setCursor(0,0);
+  lcd.print("Tx");
+  lcd.print("  Ang:");
+  lcd.print(Angle);
+  lcd.setCursor(0,1);
+  lcd.print("                    ");
   lcd.setCursor(0, 1);
   lcd.print("H:");
   lcd.print(Horz);

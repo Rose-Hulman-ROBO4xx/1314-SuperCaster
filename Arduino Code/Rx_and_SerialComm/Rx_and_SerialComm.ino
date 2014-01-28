@@ -49,6 +49,24 @@ void setup(){
   digitalWrite(LED_READY,HIGH);
   digitalWrite(LED_RECIEVE,LOW);
   digitalWrite(LED_TEST,HIGH);
+  lcd.setCursor(0,0);
+    //lcd.print("                 ");
+    lcd.setCursor(0,0);
+    lcd.print(Ang);
+    lcd.print("test");
+    lcd.print(Horz);
+    lcd.print(" ");
+    lcd.print(Vert);
+    lcd.print("  ");
+    lcd.setCursor(0,1);
+    //lcd.print("                 ");
+    lcd.setCursor(0,1);
+    lcd.print(Ei);
+    lcd.print(" ");
+    lcd.print(Ti);
+    lcd.print(" ");
+    lcd.print(Si);
+     
   
 }
 
@@ -68,6 +86,7 @@ void loop(){
     lcd.print("  ");
     lcd.setCursor(0,1);
     lcd.print("                 ");
+    lcd.setCursor(0,1);
     lcd.print(Ei);
     lcd.print(" ");
     lcd.print(Ti);
