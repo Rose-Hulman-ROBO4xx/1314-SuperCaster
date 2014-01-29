@@ -74,7 +74,7 @@ void loop(){
   //stringComplete = true;
   if(stringComplete){
     //Serial.print("Message recieved");
-    
+    /*
     lcd.setCursor(0,0);
     lcd.print("                 ");
     lcd.setCursor(0,0);
@@ -91,7 +91,7 @@ void loop(){
     lcd.print(" ");
     lcd.print(Ti);
     lcd.print(" ");
-    lcd.print(Si);
+    lcd.print(Si);*/
     
     Ei = StringToInt(E);
     Ti = StringToInt(T);
@@ -113,12 +113,13 @@ void loop(){
     Serial.print(Verti);
     Serial.print('V');
     Serial.print(Anglei);
-    Serial.print('A');
+    Serial.print("A\n");
 
-    /*if (Verti > 1024){
-      Verti = 0;
-    }
-    Ei = 0;
+    //if (Verti > 1024){
+      //Verti = 0;
+    //}
+    //Ei = 0;
+    /*
     Horzi = 512;
     Verti = Verti + 100;
     Anglei = 180;
@@ -193,7 +194,10 @@ void serialEvent(){
   digitalWrite(LED_RECIEVE,LOW);
 }
 void LeftPICSendSerial(int angle, int spd){
-      Serial.print("Sending to left PIC\n");
+      Serial.print("Sending to left PIC ");
+      Serial.print(angle);
+      Serial.print(spd);
+      Serial.print("\n");
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -201,6 +205,7 @@ void LeftPICSendSerial(int angle, int spd){
       Serial1.print(spd); 
       delay(15);
       Serial1.print('S');
+      delay(15);
       return;
 }
 void RightPICSendSerial(int angle, int spd){
@@ -212,6 +217,7 @@ void RightPICSendSerial(int angle, int spd){
       Serial2.print(spd); 
       delay(15);
       Serial2.print('S');
+      delay(15);
       return;
 }
 int StringToInt(String str){

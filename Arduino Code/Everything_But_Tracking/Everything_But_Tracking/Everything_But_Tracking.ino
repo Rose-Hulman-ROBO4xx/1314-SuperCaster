@@ -34,8 +34,8 @@ Sensor characteristics:
 
 #define US_CONVERT 0.0098 //(Volts/inch)
 #define AN_CONVERT 1023/5
-#define CLOSE_INCHES 18
-#define FAR_INCHES 30
+#define CLOSE_INCHES 5
+#define FAR_INCHES 50
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
 #define FAR_VOLT US_CONVERT*FAR_INCHES  //
 #define US_CLOSE CLOSE_VOLT*AN_CONVERT
@@ -142,7 +142,7 @@ void loop(){
     US_location = readUS();
     IR_location = readIR();
     timer_flag = 0;
-    /* 
+    
     //For debug
     Serial.print("US_location: ");
     Serial.print(US_location);
@@ -154,18 +154,22 @@ void loop(){
     Serial.print("   IR Flag: ");    
     Serial.print(IR_flag);
     Serial.print('\n');
-    */
+    
   }
   
-  Stop_flag = IR_flag|US_flag;
+  //Stop_flag = IR_flag|US_flag;
   if(IR_flag){
-    RightPICSendSerial(90, STOP_SPD);
-    LeftPICSendSerial(90, STOP_SPD);
+    //RightPICSendSerial(90, STOP_SPD);
+    //LeftPICSendSerial(90, STOP_SPD);
     //killPower()
   }else if(US_flag){
-    //Find direction NOT to move in
-  }  
-  
+    RightPICSendSerial(90, STOP_SPD);
+    LeftPICSendSerial(90, STOP_SPD);
+  }else{
+    RightPICSendSerial(90, MAX_SPD);
+    LeftPICSendSerial(90, MAX_SPD);
+  }
+  /*
   //Serial:
     if(stringComplete){
       Ei = StringToInt(E);
@@ -208,7 +212,7 @@ void loop(){
   
       inputString = "";
       stringComplete = false;
-    }
+    }*/
   
   
 }

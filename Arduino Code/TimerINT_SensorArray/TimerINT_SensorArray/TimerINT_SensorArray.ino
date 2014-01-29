@@ -28,13 +28,16 @@ Sensor characteristics:
 #include <stdlib.h>
 
 //Constants 
+#define MAX_SPD 1024
+#define STOP_SPD 512
+
 #define NUM_US 8
 #define NUM_IR 3
 
 #define US_CONVERT 0.0098 //(Volts/inch)
 #define AN_CONVERT 1023/5
-#define CLOSE_INCHES 18
-#define FAR_INCHES 30
+#define CLOSE_INCHES 10
+#define FAR_INCHES 20
 
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
 #define FAR_VOLT US_CONVERT*FAR_INCHES  // 
@@ -101,6 +104,8 @@ int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8
 void setup() {  
   int i;  
   Serial.begin(9600);
+  Serial1.begin(9600);  //Left Caster PIC
+  Serial2.begin(9600);  //Right Caster PIC  
   
   //for(i=0; i< NUM_US; i++){
   for(i=0; i< NUM_US; i++){  
@@ -158,6 +163,17 @@ void loop(){
     timer_flag = 0;
   }
   if(IR_flag){
+    //RightPICSendSerial(90, STOP_SPD);
+    //LeftPICSendSerial(90, STOP_SPD);
+    //killPower()
+  }else if(US_flag){
+    RightPICSendSerial(90, STOP_SPD);
+    LeftPICSendSerial(90, STOP_SPD);
+  }else{
+    RightPICSendSerial(90, MAX_SPD);
+    LeftPICSendSerial(90, MAX_SPD);
+  }/*
+  if(IR_flag){
     digitalWrite(IR_LEDs[IR_location], HIGH);
   }else{
     for(int i=0; i<NUM_IR; i++){
@@ -170,7 +186,7 @@ void loop(){
     for(int i=0; i<NUM_US; i++){
       digitalWrite(US_LEDs[i], LOW);
     }
-  }
+  }*/
     
   digitalWrite(LED_US_CLOSE,US_flag);
   digitalWrite(LED_IR_FAR,IR_flag);
@@ -203,6 +219,29 @@ int readIR(){
   }
   IR_flag = 0;
   return 0;
+}
+
+//Serial communication protocol for the PIC on the left caster (-> T)
+void LeftPICSendSerial(int angle, int spd){
+      Serial1.print(angle);
+      delay(15);
+      Serial1.print('A');
+      delay(15);
+      Serial1.print(spd); 
+      delay(15);
+      Serial1.print('S');
+      return;
+}
+//Serial communication protocol for the PIC on the right caster (T <-)
+void RightPICSendSerial(int angle, int spd){
+      Serial2.print(angle);
+      delay(15);
+      Serial2.print('A');
+      delay(15);
+      Serial2.print(spd); 
+      delay(15);
+      Serial2.print('S');
+      return;
 }
 
 ISR(TIMER1_COMPA_vect){

@@ -3,6 +3,7 @@
 void setup(){
   Serial1.begin(9600);
   Serial.begin(9600);
+  Serial2.begin(9600);
 }
 
 void loop(){
@@ -19,6 +20,18 @@ void loop(){
       Serial1.print(mag); 
       delay(15);
       Serial1.print('S');
+      delay(15);
+      Serial2.print(angle);
+      delay(15);
+      Serial2.print('A');
+      delay(15);
+      Serial2.print(mag); 
+      delay(15);
+      Serial2.print('S');
+      Serial.print(angle);
+      Serial.print("A ");
+      Serial.print(mag); 
+      Serial.print("S \n");
       delay(1000);
       angle += 18;
       mag += 50;
