@@ -61,7 +61,7 @@ void loop(){
 
   if (Transmit==0) {
     //Serial.print(digitalRead(PIN_ESTOP));
-    Serial.print(0);
+    Serial.print(1);
     Serial.print('E');
     //Serial.print(Transmit);    
     //Serial.print('S');
@@ -88,7 +88,7 @@ void loop(){
   lcd.print("  ");
   lcd.setCursor(8, 1);
   lcd.print("V:");
-  lcd.print( Vert);
+  lcd.print(Vert);
   lcd.print("  ");
   if (!Transmit){
     digitalWrite(PIN_LED_TRANSMIT,HIGH);
@@ -100,6 +100,6 @@ void loop(){
   }else{
     digitalWrite(PIN_LED_TURN,LOW);
   }
-  delay(10);
+  delay(100);
 }
     
