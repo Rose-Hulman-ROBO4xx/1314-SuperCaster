@@ -62,7 +62,7 @@ void loop(){
     lcd.setCursor(0,0);
     lcd.print("                 ");
     lcd.setCursor(0,0);
-    */
+    
     lcd.print(Ang);
     lcd.print(" ");
     lcd.print(Horz);
@@ -76,7 +76,7 @@ void loop(){
     lcd.print(" ");
     lcd.print(Ti);
     lcd.print(" ");
-    lcd.print(Si);
+    lcd.print(Si);*/
     
     Ei = StringToInt(E);
     Ti = StringToInt(T);
@@ -181,6 +181,18 @@ void serialEvent(){
     }else{
       inputString += inChar;
     }
+  }
+  while(Serial1.available()){
+    char a1 = (char) Serial1.read();
+    Serial.print("Left PIC angle: ");
+    Serial.print(a1);
+    Serial.print("\n");
+  }
+  while(Serial2.available()){
+    char a2 = (char) Serial2.read();
+    Serial.print("Right PIC angle: ");
+    Serial.print(a2);
+    Serial.print("\n");
   }
   digitalWrite(LED_RECIEVE,LOW);
 }

@@ -54,9 +54,9 @@ Sensor characteristics:
 
 //Pinouts
   //Sensors:
-#define USFL_PIN A0
+#define USFL_PIN A2
 #define USFC_PIN A1
-#define USFR_PIN A2
+#define USFR_PIN A0
 #define USLSF_PIN A3
 #define USRSF_PIN A4
 #define USLSB_PIN A5
@@ -95,12 +95,12 @@ String Ang = "";
 String E = "";
 String T = "";
 int i = 0;
-int Horzi = 0;
-int Verti = 0;
+int Horzi = 512;
+int Verti = 512;
 int Si = 0;      //Transmit State
 int Ti = 0;      //Tight Turn
 int Ei = 0;      //Emergency Stop
-int Angi = 0;  //Desired Angle
+int Angi = 90;  //Desired Angle
 
 
 void setup() {
@@ -140,79 +140,85 @@ void loop(){
   //Sensor check:
   if(timer_flag){
     US_location = readUS();
-    IR_location = readIR();
+    //IR_location = readIR();
     timer_flag = 0;
     
     //For debug
     Serial.print("US_location: ");
     Serial.print(US_location);
     Serial.print("     ");
-    Serial.print("IR_location: ");
-    Serial.print(IR_location);
+    //Serial.print("IR_location: ");
+    //Serial.print(IR_location);
     Serial.print("   US Flag: ");
     Serial.print(US_flag);
-    Serial.print("   IR Flag: ");    
-    Serial.print(IR_flag);
+    //Serial.print("   IR Flag: ");    
+    //Serial.print(IR_flag);
     Serial.print('\n');
     
   }
   
   //Stop_flag = IR_flag|US_flag;
   if(IR_flag){
-    //RightPICSendSerial(90, STOP_SPD);
-    //LeftPICSendSerial(90, STOP_SPD);
     //killPower()
   }else if(US_flag){
     RightPICSendSerial(90, STOP_SPD);
     LeftPICSendSerial(90, STOP_SPD);
-  }else{
-    RightPICSendSerial(90, MAX_SPD);
-    LeftPICSendSerial(90, MAX_SPD);
+  //}else{
+  //  RightPICSendSerial(90, MAX_SPD);
+  //  LeftPICSendSerial(90, MAX_SPD);
   }
-  /*
+  Serial.print(Ei);
+    Serial.print('E');
+    Serial.print(Ti);
+    Serial.print('T');
+    Serial.print(Horzi);
+    Serial.print('H');
+    Serial.print(Verti);
+    Serial.print('V');
+    Serial.print(Angi);
+    Serial.print("A\n");
   //Serial:
-    if(stringComplete){
-      Ei = StringToInt(E);
-      Ti = StringToInt(T);
-      Si = StringToInt(S);
-      Horzi = StringToInt(Horz);
-      Verti = StringToInt(Vert);
-      Angi = StringToInt(Ang);
-      Angi = Angi*0.352;
-      
-      if(Ei == 0){
-        //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
-        if(Verti < FWD_LIMIT){
-          if(Verti > BWD_LIMIT){
-            if(Horzi > LEFT_TURN_LIMIT){
-                RightPICSendSerial(Angi, TURN_SPD);
-                LeftPICSendSerial(Angi, (STOP_SPD));
-            }else if(Horzi < RIGHT_TURN_LIMIT){
-                LeftPICSendSerial(Angi, TURN_SPD);
-                RightPICSendSerial(Angi, (STOP_SPD));
-            }else{
-              LeftPICSendSerial(Anglei, Verti);
-              RightPICSendSerial(Anglei, Verti);  
-            }  
+   Ei = 1;
+   
+   if((Ei == 1) | (US_flag ==0)){
+      //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
+      if(Verti < FWD_LIMIT){
+        if(Verti > BWD_LIMIT){
+          if(Horzi > LEFT_TURN_LIMIT){
+              Serial.print("Horzi > LEFT_TURN_LIMIT\n");
+              RightPICSendSerial(Angi, TURN_SPD);
+              LeftPICSendSerial(Angi, (STOP_SPD));
+          }else if(Horzi < RIGHT_TURN_LIMIT){
+              Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
+              LeftPICSendSerial(Angi, TURN_SPD);
+              RightPICSendSerial(Angi, (STOP_SPD));          
           }else{
-              LeftPICSendSerial(Anglei, Verti);
-              RightPICSendSerial(Anglei, Verti);  
+            Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");
+            LeftPICSendSerial(Angi, Verti);
+            RightPICSendSerial(Angi, Verti);  
           }  
-          //Send angle and y-direction values to the pics
         }else{
-          LeftPICSendSerial(Angi, Verti);
-          RightPICSendSerial(Angi, Verti);      
-        }
-       //Emergency Stop: (NOT CURRENTLY IMPLEMENTED TO ENGAGE BREAKS)
+            Serial.print("Verti < BWD_LIMIT\n");         
+            LeftPICSendSerial(Angi, Verti);
+            RightPICSendSerial(Angi, Verti);  
+        }    
       }else{
-        RightPICSendSerial(Angi, STOP_SPD);
-        LeftPICSendSerial(Angi, STOP_SPD);
-        //killPower();
-      }    
+        Serial.print("Verti > FWD_LIMIT\n");
+        LeftPICSendSerial(Angi, Verti);
+        RightPICSendSerial(Angi, Verti);      
+      }
+    }else{
+      Serial.print("Ei = 0\n");
+      RightPICSendSerial(Angi, STOP_SPD);
+      LeftPICSendSerial(Angi, STOP_SPD);
+      //killPower();
+    }    
+    
+    inputString = "";
+    stringComplete = false;
+    
+    delay(100);
   
-      inputString = "";
-      stringComplete = false;
-    }*/
   
   
 }
@@ -246,6 +252,11 @@ int readIR(){
 
 //Serial communication protocol for the PIC on the left caster (-> T)
 void LeftPICSendSerial(int angle, int spd){
+      Serial.print("Sending to left PIC ");
+      Serial.print(angle);
+      Serial.print("A ");
+      Serial.print(spd);
+      Serial.print("S\n");
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -257,6 +268,11 @@ void LeftPICSendSerial(int angle, int spd){
 }
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
+      Serial.print("Sending to right PIC: ");
+      Serial.print(angle);
+      Serial.print("A ");
+      Serial.print(spd);
+      Serial.print("S\n");
       Serial2.print(angle);
       delay(15);
       Serial2.print('A');
@@ -301,6 +317,18 @@ void serialEvent(){
     }else{
       inputString += inChar;
     }
+  }
+  while(Serial1.available()){
+    char a1 = (char) Serial1.read();
+    Serial.print("Left PIC angle: ");
+    Serial.print(a1);
+    Serial.print("\n");
+  }
+  while(Serial2.available()){
+    char a2 = (char) Serial2.read();
+    Serial.print("Right PIC angle: ");
+    Serial.print(a2);
+    Serial.print("\n");
   }
 }
 
