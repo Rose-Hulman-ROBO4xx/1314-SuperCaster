@@ -181,7 +181,7 @@ void serialEvent(){
     }else{
       inputString += inChar;
     }
-  }
+  }/*
   while(Serial1.available()){
     char a1 = (char) Serial1.read();
     Serial.print("Left PIC angle: ");
@@ -194,9 +194,10 @@ void serialEvent(){
     Serial.print(a2);
     Serial.print("\n");
   }
-  digitalWrite(LED_RECIEVE,LOW);
+  digitalWrite(LED_RECIEVE,LOW);*/
 }
 void LeftPICSendSerial(int angle, int spd){
+      spd = spd/2+256;
       Serial.print("Sending to left PIC ");
       Serial.print(angle);
       Serial.print("A ");
@@ -213,6 +214,7 @@ void LeftPICSendSerial(int angle, int spd){
       return;
 }
 void RightPICSendSerial(int angle, int spd){
+      spd = spd/2*(0.83)+299;
       Serial.print("Sending to right PIC: ");
       Serial.print(angle);
       Serial.print("A ");
@@ -236,5 +238,4 @@ int StringToInt(String str){
   return num;
 }
 //void killPower();
-  
-  
+    

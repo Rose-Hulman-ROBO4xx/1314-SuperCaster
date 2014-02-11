@@ -41,6 +41,7 @@
 int lastVal=0;
 int rxAngle=0;
 int rxSpeed=0;
+char BytetoSend = '0';
 //_Bool rotEncoder[8];
 
 /** Local Function Prototypes **************************************/
@@ -88,7 +89,7 @@ void main (void)
     // config 1 = Setup the timing to a conservative value (you don't need to ever change this)
     // config 2 = Use channel 0, not interrupts off, use the power and ground as referrences
     // portconfig = 0x0E setup only analog 0 as a possible analog input pin
-
+    int myAng=0;
 
     //Setup serial communications
     RCONbits.IPEN = 1;
@@ -111,8 +112,8 @@ void main (void)
     ADCON1 = 0x0B;        //Select Vref+ = VDD, Vref- = VSS, AN0-AN3 = Analog Input
     //    ADCON2 = 0xA9;        //### Acquisition delay 12 TAD, A/D conversion clock 8TOSC, Right Justified
     TRISA = 0xFF;  //port A all input
-    TRISC = 0x80;  //port C
-    TRISB = 0x00;  //port B all output
+    TRISC = 0x80;  //port C RC7 is serial comm input
+    TRISB = 0xFF;  //port B all output
 
     OSCCONbits.IRCF2 = 1;
     OSCCONbits.IRCF1 = 1;
@@ -147,7 +148,19 @@ void main (void)
 
     XLCDInit();
     XLCDClear();
+    BytetoSend = 'a';
     while(1){
+        /*
+        myAng = getAngle();
+        BytetoSend = myAng+48;
+        printf('%c',BytetoSend);
+        XLCDClear();
+        sprintf(line1,"Angle: %i",(myAng));
+        XLCDL1home();
+        XLCDPutRamString(line1);*/
+
+        printf('%c',BytetoSend);
+
         if(uartFlag == 1){
             uartFlag = 0;
 
@@ -155,16 +168,17 @@ void main (void)
             /*
             XLCDClear();
             //uartFlag++;
-            sprintf(line1,"Angle: %i",rxAngle);
+            sprintf(line1,"Angle: %i",getAngle());
             XLCDL1home();
             XLCDPutRamString(line1);
             sprintf(line2,"Speed: %i",rxSpeed);
             XLCDL2home();
-            XLCDPutRamString(line2);
-            */
+            XLCDPutRamString(line2);*/
+
             //Set motor speed and direction
             setMotorsVector(rxAngle,rxSpeed);
         }
+
         //PIC Serial loopback test
         /*if(PORTAbits.RA4 ==0){
             printf("%i",5);
@@ -172,9 +186,7 @@ void main (void)
             printf("%i",10);
             printf("%c",'S');
         }*/
-
-    /*
-    Delay10KTCYx(50);*/
+        Delay10KTCYx(10);
     }
 
 }
@@ -213,7 +225,7 @@ void setMotorsVector(int Ang,int Mag){
 
     //find current supercaster angle:
     currAng = getAngle();
-    printf("i",currAng);
+   // printf("%i",currAng);
     //currAng = Ang;
 
 
@@ -312,13 +324,31 @@ int getAngle(){
     int encVal = 0;
     int angle =0;
     int pos = 0;
+    int rotEncoder[8];
 
-    //rotEncoder = PORTBbits;
+    rotEncoder[0] = PORTBbits.RB0;
+    rotEncoder[1] = PORTBbits.RB1;
+    rotEncoder[2] = PORTBbits.RB2;
+    rotEncoder[3] = PORTBbits.RB3;
+    rotEncoder[4] = PORTBbits.RB4;
+    rotEncoder[5] = PORTBbits.RB5;
+    rotEncoder[6] = PORTBbits.RB6;
+    rotEncoder[7] = PORTBbits.RB7;
 
+
+    // binary to integer conversion
     for(i=0; i<8;i++){
-        //encVal += rotEncoder[i]*(2^i);
-        encVal = 0;
+        encVal += rotEncoder[i]*(2^i);
     }
+    /*XLCDClear();
+    //sprintf(line2,"%i %i %i %i %i %i %i %i",PORTBbits.RB0,PORTBbits.RB1,PORTBbits.RB2,PORTBbits.RB3,PORTBbits.RB4,PORTBbits.RB5,PORTBbits.RB6,PORTBbits.RB7);
+    sprintf(line1,"encVal: %c",(encVal+48));
+    XLCDL1home();
+    XLCDPutRamString(line1);
+    XLCDL2home();
+    XLCDPutRamString(line2);*/
+
+    //printf('%c',(encVal+48));
 
     switch (encVal) {
         case 127:
@@ -709,8 +739,14 @@ int getAngle(){
             pos = 64;
         break;
     }
-    angle = pos*(360/180);
-    return rxAngle;
+
+    angle = pos*(360/127);
+        /*
+    sprintf(line2,"pos: %i ang: %i",pos,angle);
+    XLCDL2home();
+    XLCDPutRamString(line2);*/
+
+    return angle;
 }
 
 /*****************************************************************

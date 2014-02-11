@@ -50,14 +50,24 @@ Sensor characteristics:
 #define IR_EDGE IR_VOLT*AN_CONVERT
 
 //Pinouts
-#define USFL_PIN A0
+/*
+#define USFL_PIN A2
 #define USFC_PIN A1
 #define USFR_PIN A0
 #define USLSF_PIN A3
 #define USRSF_PIN A4
 #define USLSB_PIN A5
 #define USRSB_PIN A6
-#define USB_PIN A7
+#define USB_PIN A7*/
+
+#define USFL_PIN A3
+#define USFC_PIN A3
+#define USFR_PIN A3
+#define USLSF_PIN A3
+#define USRSF_PIN A3
+#define USLSB_PIN A3
+#define USRSB_PIN A3
+#define USB_PIN A3
 
 #define IRFL_PIN A8
 #define IRFC_PIN A9
