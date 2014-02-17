@@ -32,7 +32,7 @@ void loop(){
     Serial.print(a0);
     Serial.print('\n');
   }*/
-  Serial.print('\n');
+  //Serial.print('\n');
   delay(100);
 }
   
@@ -47,14 +47,17 @@ void serialEvent(){
   }*/  
   while(Serial1.available()){
      a1 = (char)Serial1.read();
-     Serial.print((a1+48));
+     
      if(a1 == 'A'){
+       Serial.print(" -> ");
        Serial.print(ang);
        Serial.print('\n');
        ang = 0;
      }else{
        ang = ang*10;
        ang = ang + a1;
+       Serial.print(ang);
+       Serial.print(" ");
      }
   }
   
