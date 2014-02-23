@@ -30,6 +30,7 @@ int Angle;
 int Transmit;
 int Turn;
 int EStop;
+int RxReady;
 char thousand;
 char hundreds;
 char tens;
@@ -66,19 +67,21 @@ void loop(){
   EStop = digitalRead(PIN_ESTOP);
   
   if (Transmit==0) {
-    //Serial.print(digitalRead(PIN_ESTOP));
-    sendOneNumber(EStop);
-    sendChar('E');
-    //Serial.print(Transmit);    
-    //Serial.print('S');
-    sendOneNumber(Turn);
-    sendChar('T');
-    sendNumber(Horz);
-    sendChar('H');
-    sendNumber(Vert);
-    sendChar('V');
-    sendNumber(Angle);
-    sendChar('A');
+    //if(RxReady==1){
+      //Serial.print(digitalRead(PIN_ESTOP));
+      sendOneNumber(EStop);
+      sendChar('E');
+      //Serial.print(Transmit);    
+      //Serial.print('S');
+      sendOneNumber(Turn);
+      sendChar('T');
+      sendNumber(Horz);
+      sendChar('H');
+      sendNumber(Vert);
+      sendChar('V');
+      sendNumber(Angle);
+      sendChar('A');
+    //}
   }  
   
   LCDUpdate();
@@ -93,7 +96,7 @@ void loop(){
   }else{
     digitalWrite(PIN_LED_TURN,LOW);
   }
-  delay(50);
+  delay(100);
 }
     
     
@@ -151,4 +154,13 @@ void sendOneNumber(int num){
 void sendChar(char chara){
  char temp = chara + TEAM_NUM;
  Serial.print(temp);  
+}
+
+void serialEvent(){
+  while(Serial.available()){
+    char inChar = (char) Serial.read() - TEAM_NUM;
+    if(inChar <= 57 && inChar >= 48){
+      RxReady = inChar-48;
+    }
+  }
 }

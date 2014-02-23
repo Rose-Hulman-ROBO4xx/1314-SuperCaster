@@ -139,14 +139,14 @@ void loop(){
         }else{
             Serial.print("Verti < BWD_LIMIT\n");     
         
-          Verti = Verti/2+256;      
+            Verti = Verti/2+256;      
             LeftPICSendSerial(Anglei, Verti);
             RightPICSendSerial(Anglei, Verti);  
         }    
       }else{
         Serial.print("Verti > FWD_LIMIT\n");
         
-          Verti = Verti/2+256;   
+        Verti = Verti/2+256;   
         LeftPICSendSerial(Anglei, Verti);
         RightPICSendSerial(Anglei, Verti);      
       }

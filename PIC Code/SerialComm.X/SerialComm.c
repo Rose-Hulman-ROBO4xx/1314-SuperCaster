@@ -36,7 +36,7 @@
 //#define   JYBUFFER 400
 #define   ANGMAX   360
 #define   ANGBUFF   5
-#define   ANGCOEF   2
+#define   ANGCOEF   8
 #define   MAXSPEED 1023
 #define   STOPTURNSPEED MAXSPEED*0.25
 //#define   LMOTORDIRECTION PORTBbits.RB1
@@ -87,6 +87,7 @@ int uartFlag;
 
 void main (void)
 {
+    int i = 0;
  // configure A/D convertor
     // config 1 = Setup the timing to a conservative value (you don't need to ever change this)
     // config 2 = Use channel 0, not interrupts off, use the power and ground as referrences
@@ -139,8 +140,8 @@ void main (void)
     SetDCPWM2(0);
 
     //Set initial variable values:
-    ML_Dir = 1; //forward
-    MR_Dir = 1;
+    ML_Dir = 0; //forward
+    MR_Dir = 0;
     ML_PWM = 0; //stopped
     MR_PWM = 0;
 
@@ -149,33 +150,23 @@ void main (void)
     RMOTORDIRECTION = MR_Dir;
 
     while(1){
-        //int i = 0;
-        /*
-        currAng = getAngle();
-        PORTD = 0x00;
-        PORTD = currAng;
-         *
-         */
+        //If no new signal has been recieved for 500 cycles, stop motors
+        if(i>500){
+            setMotorsVector(180,512);
+            Delay10KTCYx(50);
+        }
 
         getAngle();
-        /*
-        myAng = getAngle();
-        BytetoSend = myAng+48;
-        printf('%c',BytetoSend);
-        XLCDClear();
-        sprintf(line1,"Angle: %i",(myAng));
-        XLCDL1home();
-        XLCDPutRamString(line1);*/
-
 
         if(uartFlag == 1){
+            i = 0;
             getAngle();
             uartFlag = 0;
 
             //Set motor speed and direction
             setMotorsVector(rxAngle,rxSpeed);
         }
-
+        i++;
         //PIC Serial loopback test
         /*if(PORTAbits.RA4 ==0){
             printf("%i",5);
@@ -184,7 +175,6 @@ void main (void)
             printf("%c",'S');
         }*/
     }
-
 }
 
 
@@ -214,37 +204,35 @@ void setMotorsVector(int Ang,int Mag){
 
     //Center possible analog values around 0
     Mag = Mag - JHALF;
-    //Adjust Mag to -1024 to 1024 (For PWM duty cycle)
+    //Spread Mag to from (-512, 512) to (-1024, 1024) (For PWM duty cycle)
     Mag = 2*Mag;
 
-    //find current supercaster angle:
-    //currAng = getAngle();
-    /*
-    Delay10KTCYx(50);
-    PORTD = 0x00;
-    PORTD = currAng;
-    Delay10KTCYx(50);*/
 
-   // printf("%i",currAng);
-    //currAng = Ang;
+    if(Ang >270){
+        Ang = 270;
+    }else if(Ang < 90){
+        Ang = 90;
+    }
 
     dAng = currAng-Ang; //Find amount of degrees currently off from target angle
 
  //Determine wheel porportions based upon current/desired angles
     //Caster must turn to the right:
     if ((dAng)>(ANGBUFF)){
-        L_Coeff = 1;
-        R_Coeff = 1-ANGCOEF*(dAng/ANGMAX);  //As the angle is closer to being correct, it TURNS slower
-        if(R_Coeff<0){
+        L_Coeff = 0.5;
+        //R_Coeff = 1-ANGCOEF*(dAng/ANGMAX);  //As the angle is closer to being correct, it TURNS slower
+        R_Coeff = 1;
+        /*if(R_Coeff<0){
             R_Coeff = 0;
-        }
+        }*/
     //Caster must turn to the left:
     }else if((dAng)<(-1*ANGBUFF)){
-        L_Coeff = 1+ANGCOEF*(dAng/ANGMAX); //Add because dAng will be negative
-        R_Coeff = 1;
-        if(L_Coeff<0){
+        //L_Coeff = 1+ANGCOEF*(dAng/ANGMAX); //Add because dAng will be negative
+        L_Coeff = 1;
+        R_Coeff = 0.5;
+        /*if(L_Coeff<0){
             L_Coeff = 0;
-        }
+        }*/
     //Default to straight
     }else{
         L_Coeff = 1;
@@ -254,16 +242,16 @@ void setMotorsVector(int Ang,int Mag){
 //Determine motor directions and calculate speed values
     //If input Mag > 512+buffer, go forwards
       if(Mag > JYBUFFER) {
-        ML_Dir = 1;
-        MR_Dir = 1;
+        ML_Dir = 0;
+        MR_Dir = 0;
         //find pwm values
         ML_PWM = Mag * L_Coeff;
         MR_PWM = Mag * R_Coeff;
 
     //If input Mag < 512-buffer, go backwards
       } else if(Mag < (-1*JYBUFFER)){
-        ML_Dir = 0;
-        MR_Dir = 0;
+        ML_Dir = 1;
+        MR_Dir = 1;
         //find pwm values
         ML_PWM = -1*Mag * L_Coeff;
         MR_PWM = -1*Mag * R_Coeff;
@@ -304,15 +292,6 @@ void setMotorsVector(int Ang,int Mag){
     //Set direction
     LMOTORDIRECTION = ML_Dir;
     RMOTORDIRECTION = MR_Dir;
-    /*
-    XLCDClear();
-    //uartFlag++;
-    sprintf(line1,"PWM: %i, %i",ML_PWM,MR_PWM);
-    XLCDL1home();
-    XLCDPutRamString(line1);
-    sprintf(line2,"Dir: %i, %i --%i",ML_Dir,MR_Dir,Ang);
-    XLCDL2home();
-    XLCDPutRamString(line2);*/
 
     return;
 }
@@ -333,24 +312,6 @@ int getAngle(){
     rotEncoder[6] = PORTBbits.RB6;
     rotEncoder[7] = PORTBbits.RB7;
 
-    /*
-    PORTD = 0x01;
-    Delay10KTCYx(50);
-    PORTD = PORTB;
-    Delay10KTCYx(50);
-
-    PORTD = 0x02;
-    Delay10KTCYx(50);
-    PORTDbits.RD0 = rotEncoder[0];
-    PORTDbits.RD1 = rotEncoder[1];
-    PORTDbits.RD2 = rotEncoder[2];
-    PORTDbits.RD3 = rotEncoder[3];
-    PORTDbits.RD4 = rotEncoder[4];
-    PORTDbits.RD5 = rotEncoder[5];
-    PORTDbits.RD6 = rotEncoder[6];
-    PORTDbits.RD7 = rotEncoder[7];
-    Delay10KTCYx(50);*/
-
     encVal = (rotEncoder[0]+rotEncoder[1]*2+rotEncoder[2]*4+rotEncoder[3]*8+rotEncoder[4]*16+rotEncoder[5]*32+rotEncoder[6]*64+rotEncoder[7]*128);
     /*
     //PORTD = 0xFF;
@@ -364,21 +325,7 @@ int getAngle(){
         Delay10KTCYx(20);
     }*/
 
-
-    //PORTD = 0x03;
-    //Delay10KTCYx(50);
     PORTD = encVal;
-    //Delay10KTCYx(50);
-
-    /*XLCDClear();
-    //sprintf(line2,"%i %i %i %i %i %i %i %i",PORTBbits.RB0,PORTBbits.RB1,PORTBbits.RB2,PORTBbits.RB3,PORTBbits.RB4,PORTBbits.RB5,PORTBbits.RB6,PORTBbits.RB7);
-    sprintf(line1,"encVal: %c",(encVal+48));
-    XLCDL1home();
-    XLCDPutRamString(line1);
-    XLCDL2home();
-    XLCDPutRamString(line2);*/
-
-    //printf('%c',(encVal+48));
 
     switch (encVal) {
         case 127:
@@ -771,20 +718,6 @@ int getAngle(){
     }
     angle = (int) pos*(2.8345); //  2.8345 = 360/127
     currAng = angle;
-/*
-    PORTD = 0x04;
-    Delay10KTCYx(50);
-    PORTD = angle;
-    Delay10KTCYx(50);
-    PORTD = 0x05;
-    Delay10KTCYx(50);
-    PORTD = currAng;
-    Delay10KTCYx(30);*/
-
-        /*
-    sprintf(line2,"pos: %i ang: %i",pos,angle);
-    XLCDL2home();
-    XLCDPutRamString(line2);*/
 
     return angle;
 }
