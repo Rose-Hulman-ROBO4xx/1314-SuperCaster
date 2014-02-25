@@ -31,11 +31,11 @@ Sensor characteristics:
 #define MAX_SPD 1023
 #define STOP_SPD 512
 
-#define NUM_US 1
-#define NUM_IR 7
+#define NUM_US 0
+#define NUM_IR 3
 
-#define CLOSE_INCHES 5
-#define FAR_INCHES 30
+#define CLOSE_INCHES 30
+#define FAR_INCHES 60
 #define US_CONVERT 0.0098 //(Volts/inch)
 
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
@@ -46,7 +46,7 @@ Sensor characteristics:
 #define US_FAR FAR_VOLT*AN_CONVERT
 
 //#define IR_EDGE 0.44*AN_CONVERT  //~4ft   in V
-#define IR_VOLT 2
+#define IR_VOLT 1
 #define IR_EDGE IR_VOLT*AN_CONVERT
 
 //Pinouts
@@ -60,17 +60,17 @@ Sensor characteristics:
 #define USRSB_PIN A6
 #define USB_PIN A7*/
 
-#define USFL_PIN A3
-#define USFC_PIN A3
-#define USFR_PIN A3
+#define USFL_PIN A2
+#define USFC_PIN A1
+#define USFR_PIN A0
 #define USLSF_PIN A3
-#define USRSF_PIN A3
-#define USLSB_PIN A3
-#define USRSB_PIN A3
-#define USB_PIN A3
+#define USRSF_PIN A4
+#define USLSB_PIN A5
+#define USRSB_PIN A6
+#define USB_PIN A7
 
-#define IRFL_PIN A8
-#define IRFC_PIN A9
+#define IRFL_PIN A9
+#define IRFC_PIN A8
 #define IRFR_PIN A10
 #define IRL_PIN A11
 #define IRR_PIN A12
@@ -85,19 +85,19 @@ Sensor characteristics:
 #define LED_IR6 45
 #define LED_IR7 46
 
-#define LED_US1 30
-#define LED_US2 31
-#define LED_US3 32
+#define LED_US1 32
+#define LED_US2 30
+#define LED_US3 31
 #define LED_US4 33
 #define LED_US5 34
 #define LED_US6 35
 #define LED_US7 36
 #define LED_US8 37
 
-
+/*
 #define LED_US_CLOSE 44
 #define LED_GOOD 45
-#define LED_IR_FAR 46
+#define LED_IR_FAR 46*/
 
 //Global Variables
 boolean US_flag = 0;
@@ -131,7 +131,7 @@ void setup() {
     pinMode(IR_LEDs[i],OUTPUT);
     digitalWrite(IR_LEDs[i],LOW);
   }
- 
+ /*
   pinMode(LED_US_CLOSE,OUTPUT);
   pinMode(LED_GOOD,OUTPUT);
   pinMode(LED_IR_FAR,OUTPUT);
@@ -159,8 +159,8 @@ void setup() {
 
 
 void loop(){
-  RightPICSendSerial(90, 512);
-  LeftPICSendSerial(90, 512);
+  RightPICSendSerial(180, 512);
+  LeftPICSendSerial(180, 512);
   if(timer_flag){
     US_location = readUS();
     Serial.print("\n");
@@ -188,7 +188,9 @@ void loop(){
   }else{
     RightPICSendSerial(90, MAX_SPD);
     LeftPICSendSerial(90, MAX_SPD);
-  }*//*
+  }*/
+  
+  
   if(IR_flag){
     digitalWrite(IR_LEDs[IR_location], HIGH);
   }else{
@@ -203,7 +205,7 @@ void loop(){
       digitalWrite(US_LEDs[i], LOW);
     }
   }
-    
+    /*
   digitalWrite(LED_US_CLOSE,US_flag);
   digitalWrite(LED_IR_FAR,IR_flag);
   digitalWrite(LED_GOOD,!(US_flag|IR_flag));*/
@@ -215,6 +217,7 @@ int readUS(){
   int tempVal=0;
   float vltg = 0;
   float inch = 0;
+  US_flag = 0;
   for(int i=0;i<NUM_US;i++){    
     tempVal = analogRead(US_pins[i]);
     
@@ -234,7 +237,7 @@ int readUS(){
       US_flag = 1;
       return i;
     }else if(tempVal > US_FAR){
-      US_flag = 0;
+      //US_flag = 0;
     }
   }
   

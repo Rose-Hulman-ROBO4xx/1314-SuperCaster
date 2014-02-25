@@ -51,7 +51,6 @@ void setup(){
 }
 
 void loop(){  
-  Serial.print(1+TEAM_NUM);
   //delay(1000);
   //stringComplete = true;
   if(stringComplete){
@@ -134,8 +133,7 @@ void loop(){
           }else{
             Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");
             
-          Verti = Verti/2+256;           
-          Verti = Verti/2+256;   
+          Verti = Verti/2+256;  
             LeftPICSendSerial(Anglei, Verti);
             RightPICSendSerial(Anglei, Verti);  
           }  
@@ -216,7 +214,8 @@ void LeftPICSendSerial(int angle, int spd){
       delay(15);
       Serial1.print('A');
       delay(15);
-      Serial1.print((MAX_SPD-spd)); 
+      //Serial1.print((MAX_SPD-spd)); 
+      Serial1.print(spd);
       delay(15);
       Serial1.print('S');
       delay(15);

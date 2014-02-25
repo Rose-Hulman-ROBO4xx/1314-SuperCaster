@@ -29,30 +29,40 @@ Sensor characteristics:
 
 //Constants 
   //Sensors:
-#define NUM_US 8
-#define NUM_IR 7
+#define NUM_US 5
+#define NUM_IR 0
+
+#define US_HIT_BUFFER 15
+
+#define CLOSE_INCHES 35 //Approximate stopping distance for US
+#define FAR_INCHES 55    //Approx starting distance for US
+
+#define AN_CONVERT 1023/5
+
+#define IR_EDGE 0.44*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
 
 #define US_CONVERT 0.0098 //(Volts/inch)
-#define AN_CONVERT 1023/5
-#define CLOSE_INCHES 5
-#define FAR_INCHES 50
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
 #define FAR_VOLT US_CONVERT*FAR_INCHES  //
 #define US_CLOSE CLOSE_VOLT*AN_CONVERT
 #define US_FAR FAR_VOLT*AN_CONVERT
-#define IR_EDGE 0.44*AN_CONVERT  //~4ft   in V
+
 
   //Serial:
-#define FWD_ANG 90
-#define FWD_LIMIT 712
-#define BWD_LIMIT 312
-#define LEFT_TURN_LIMIT 912
-#define RIGHT_TURN_LIMIT 112
-#define TURN_SPD 1024 //Remember: 0 = full back, 512 = stop, 1024 = full fwd
-#define MAX_SPD 1024
+#define FWD_ANG 180
+#define FWD_LIMIT 772
+#define BWD_LIMIT 252
+#define LEFT_TURN_LIMIT 1000
+#define RIGHT_TURN_LIMIT 20
+#define MAX_SPD 1023
+#define TURN_SPD MAX_SPD*0.75 //Remember: 0 = full back, 512 = stop, 1024 = full fwd
 #define STOP_SPD 512
 
+#define TEAM_NUM 32
+
 //Pinouts
+#define KILL_PIN 22
+
   //Sensors:
 #define USFL_PIN A2
 #define USFC_PIN A1
@@ -71,6 +81,14 @@ Sensor characteristics:
 #define IRBL_PIN A13
 #define IRBR_PIN A14
 
+#define LED_US1 32
+#define LED_US2 30
+#define LED_US3 31
+#define LED_US4 33
+#define LED_US5 34
+#define LED_US6 35
+#define LED_US7 36
+#define LED_US8 37
 
 //Global Variables
   //Sensors:
@@ -83,7 +101,10 @@ int IR_location = 0;
 int US_pins[] = {USFL_PIN,USFC_PIN,USFR_PIN,USLSF_PIN,USRSF_PIN,USLSB_PIN,USRSB_PIN,USB_PIN};
 int IR_pins[] = {IRFL_PIN,IRFC_PIN,IRFR_PIN,IRL_PIN,IRR_PIN,IRBL_PIN,IRBR_PIN};
 float US_read[] = {0,0,0,0,0,0,0,0};
+int US_hitCount[] = {0,0,0,0,0,0,0,0};
 float IR_read[] = {0,0,0,0,0,0,0};
+
+int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
 
   //Serial:
 String inputString = "";
@@ -100,14 +121,20 @@ int Verti = 512;
 int Si = 0;      //Transmit State
 int Ti = 0;      //Tight Turn
 int Ei = 0;      //Emergency Stop
-int Angi = 90;  //Desired Angle
+int Anglei = 180;  //Desired Angle
 
 
 void setup() {
+  pinMode(KILL_PIN,OUTPUT);
+  digitalWrite(KILL_PIN,LOW);
+  
   //Sensors:  
   int i=0;
   for(i=0; i<NUM_US; i++){
     pinMode(US_pins[i],INPUT);
+    
+    pinMode(US_LEDs[i],OUTPUT);
+    digitalWrite(US_LEDs[i],LOW);
   }
   for(i=0;i<NUM_IR;i++){
     pinMode(IR_pins[i],INPUT);
@@ -120,18 +147,14 @@ void setup() {
   inputString.reserve(200);
   
   
-  //set timer1 interrupt at 1Hz
+  //set timer1 interrupt
   TCCR1A = 0;// set entire TCCR1A register to 0
   TCCR1B = 0;// same for TCCR1B
   TCNT1  = 0;//initialize counter value to 0
-  // set compare match register for 1hz increments
-  OCR1A = 1563;// = (16*10^6) / (1*1024) - 1 (must be <65536)
-  // turn on CTC mode
-  TCCR1B |= (1 << WGM12);
-  // Set CS12 and CS10 bits for 1024 prescaler
-  TCCR1B |= (1 << CS12) | (1 << CS10);  
-  // enable timer compare interrupt
-  TIMSK1 |= (1 << OCIE1A);
+  OCR1A = 1563;// = (16*10^6) / (1*1024) - 1 (must be <65536)  
+  TCCR1B |= (1 << WGM12); // turn on CTC mode  
+  TCCR1B |= (1 << CS12) | (1 << CS10);  // Set CS12 and CS10 bits for 1024 prescaler  
+  TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
   sei();//allow interrupts
 }
 
@@ -158,82 +181,116 @@ void loop(){
   }
   
   //Stop_flag = IR_flag|US_flag;
-  if(IR_flag){
+  //if(IR_flag){
     //killPower()
-  }else if(US_flag){
-    RightPICSendSerial(90, STOP_SPD);
-    LeftPICSendSerial(90, STOP_SPD);
-  //}else{
-  //  RightPICSendSerial(90, MAX_SPD);
-  //  LeftPICSendSerial(90, MAX_SPD);
+  if(US_flag){
+    digitalWrite(US_LEDs[US_location], HIGH);
+    RightPICSendSerial(190, STOP_SPD);
+    LeftPICSendSerial(190, STOP_SPD);
+  }else{
+    for(int i=0; i<NUM_US; i++){
+      digitalWrite(US_LEDs[i], LOW);
+    }
   }
+  /*
   Serial.print(Ei);
-    Serial.print('E');
-    Serial.print(Ti);
-    Serial.print('T');
-    Serial.print(Horzi);
-    Serial.print('H');
-    Serial.print(Verti);
-    Serial.print('V');
-    Serial.print(Angi);
-    Serial.print("A\n");
-  //Serial:
-   Ei = 1;
+  Serial.print('E');
+  Serial.print(Ti);
+  Serial.print('T');
+  Serial.print(Horzi);
+  Serial.print('H');
+  Serial.print(Verti);
+  Serial.print('V');
+  Serial.print(Angi);
+  Serial.print("A\n");*/
+  
+  //Serial:  
+ if(stringComplete){ 
+    Ei = StringToInt(E);
+    Ti = StringToInt(T);
+    Si = StringToInt(S);
+    Horzi = StringToInt(Horz);
+    Verti = StringToInt(Vert);
+    //Verti = Verti * (MAX_SPD/1024);
+    Anglei = StringToInt(Ang);
+    Anglei = Anglei*0.352;
    
-   if((Ei == 1) | (US_flag ==0)){
+    if((Ei == 1) && (US_flag ==0)){
       //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
       if(Verti < FWD_LIMIT){
         if(Verti > BWD_LIMIT){
           if(Horzi > LEFT_TURN_LIMIT){
               Serial.print("Horzi > LEFT_TURN_LIMIT\n");
-              RightPICSendSerial(Angi, TURN_SPD);
-              LeftPICSendSerial(Angi, (STOP_SPD));
+              if(Ti){                
+                RightPICSendSerial(Anglei, (TURN_SPD));
+                LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));
+              }else{
+                RightPICSendSerial(Anglei, TURN_SPD);
+                LeftPICSendSerial(Anglei, (STOP_SPD));
+              }
           }else if(Horzi < RIGHT_TURN_LIMIT){
               Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
-              LeftPICSendSerial(Angi, TURN_SPD);
-              RightPICSendSerial(Angi, (STOP_SPD));          
+              if(Ti){
+                LeftPICSendSerial(Anglei, (TURN_SPD));
+                RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));                 
+              }else{
+                LeftPICSendSerial(Anglei, TURN_SPD);
+                RightPICSendSerial(Anglei, (STOP_SPD));   
+              }           
           }else{
-            Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");
-            LeftPICSendSerial(Angi, Verti);
-            RightPICSendSerial(Angi, Verti);  
+            Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
+            Verti = Verti/2+256; 
+            LeftPICSendSerial(Anglei, Verti);
+            RightPICSendSerial(Anglei, Verti);  
           }  
         }else{
-            Serial.print("Verti < BWD_LIMIT\n");         
-            LeftPICSendSerial(Angi, Verti);
-            RightPICSendSerial(Angi, Verti);  
+            Serial.print("Verti < BWD_LIMIT\n");                    
+            Verti = Verti/2+256; 
+            LeftPICSendSerial(Anglei, Verti);
+            RightPICSendSerial(Anglei, Verti);  
         }    
       }else{
-        Serial.print("Verti > FWD_LIMIT\n");
-        LeftPICSendSerial(Angi, Verti);
-        RightPICSendSerial(Angi, Verti);      
+        Serial.print("Verti > FWD_LIMIT\n");           
+        Verti = Verti/2+256; 
+        LeftPICSendSerial(Anglei, Verti);
+        RightPICSendSerial(Anglei, Verti);      
       }
     }else{
       Serial.print("Ei = 0\n");
-      RightPICSendSerial(Angi, STOP_SPD);
-      LeftPICSendSerial(Angi, STOP_SPD);
+      RightPICSendSerial(Anglei, STOP_SPD);
+      LeftPICSendSerial(Anglei, STOP_SPD);
       //killPower();
     }    
     
     inputString = "";
     stringComplete = false;
-    
-    delay(100);
-  
+ 
+    delay(50);
+ }
   
   
 }
 //Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
 int readUS(){
-  int tempVal=0;
+  int tempVal=0;    
   for(i=0;i<NUM_US;i++){
-    tempVal = analogRead(US_pins[i]);
-    if(tempVal < US_CLOSE){
-      US_flag = 1;
-      return i;
-    }else if(tempVal > US_FAR){
-      US_flag = 0;
+    US_read[i] = analogRead(US_pins[i]);
+    if(US_read[i] < US_CLOSE){
+      US_hitCount[i]++;
+    }else if(US_read[i] > US_FAR){
+      US_hitCount[i] = 0;
     }
   }
+  
+  for(i=0;i<NUM_US;i++){ 
+     if(US_hitCount[i]>US_HIT_BUFFER){
+        US_hitCount[i] = US_HIT_BUFFER+1;  
+        US_flag = 1;
+        return i;
+     }
+  }  
+  
+  US_flag = 0;
   return -1;
 }
 //Reads all values of the infrared sensors, returns the array index of a sensor detecting a cliff
@@ -252,11 +309,11 @@ int readIR(){
 
 //Serial communication protocol for the PIC on the left caster (-> T)
 void LeftPICSendSerial(int angle, int spd){
-      Serial.print("Sending to left PIC ");
+      /*Serial.print("Sending to left PIC ");
       Serial.print(angle);
       Serial.print("A ");
       Serial.print(spd);
-      Serial.print("S\n");
+      Serial.print("S\n");*/
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -268,11 +325,11 @@ void LeftPICSendSerial(int angle, int spd){
 }
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
-      Serial.print("Sending to right PIC: ");
+      /*Serial.print("Sending to right PIC: ");
       Serial.print(angle);
       Serial.print("A ");
       Serial.print(spd);
-      Serial.print("S\n");
+      Serial.print("S\n");*/
       Serial2.print(angle);
       delay(15);
       Serial2.print('A');
@@ -294,7 +351,7 @@ int StringToInt(String str){
 //Serial Rx from remote control
 void serialEvent(){
   while(Serial.available()){
-    char inChar = (char) Serial.read();
+    char inChar = (char) Serial.read() - TEAM_NUM;
     if(inChar=='A'){
       Ang = inputString;
       inputString = "";
@@ -314,10 +371,10 @@ void serialEvent(){
     }else if(inChar =='E'){
       E = inputString;
       inputString = "";
-    }else{
+    }else if(inChar <= 57 && inChar >= 48){
       inputString += inChar;
     }
-  }
+  }/*
   while(Serial1.available()){
     char a1 = (char) Serial1.read();
     Serial.print("Left PIC angle: ");
@@ -329,7 +386,7 @@ void serialEvent(){
     Serial.print("Right PIC angle: ");
     Serial.print(a2);
     Serial.print("\n");
-  }
+  }*/
 }
 
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
