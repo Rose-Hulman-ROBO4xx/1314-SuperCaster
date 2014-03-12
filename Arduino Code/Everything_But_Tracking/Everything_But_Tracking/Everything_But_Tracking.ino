@@ -29,17 +29,17 @@ Sensor characteristics:
 
 //Constants 
   //Sensors:
-#define NUM_US 5
+#define NUM_US 2
 #define NUM_IR 0
 
 #define US_HIT_BUFFER 15
 
-#define CLOSE_INCHES 35 //Approximate stopping distance for US
-#define FAR_INCHES 55    //Approx starting distance for US
+#define CLOSE_INCHES 30 //Approximate stopping distance for US
+#define FAR_INCHES 40    //Approx starting distance for US
 
 #define AN_CONVERT 1023/5
 
-#define IR_EDGE 0.44*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
+#define IR_EDGE 0.5*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
 
 #define US_CONVERT 0.0098 //(Volts/inch)
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
@@ -163,9 +163,9 @@ void loop(){
   //Sensor check:
   if(timer_flag){
     US_location = readUS();
-    //IR_location = readIR();
+    IR_location = readIR();
     timer_flag = 0;
-    
+    /*
     //For debug
     Serial.print("US_location: ");
     Serial.print(US_location);
@@ -176,7 +176,7 @@ void loop(){
     Serial.print(US_flag);
     //Serial.print("   IR Flag: ");    
     //Serial.print(IR_flag);
-    Serial.print('\n');
+    Serial.print('\n');*/
     
   }
   
@@ -185,12 +185,14 @@ void loop(){
     //killPower()
   if(US_flag){
     digitalWrite(US_LEDs[US_location], HIGH);
-    RightPICSendSerial(190, STOP_SPD);
-    LeftPICSendSerial(190, STOP_SPD);
+    RightPICSendSerial(180, STOP_SPD);
+    LeftPICSendSerial(180, STOP_SPD);
   }else{
     for(int i=0; i<NUM_US; i++){
       digitalWrite(US_LEDs[i], LOW);
     }
+    RightPICSendSerial(180, STOP_SPD+300);
+    LeftPICSendSerial(180, STOP_SPD+300);
   }
   /*
   Serial.print(Ei);

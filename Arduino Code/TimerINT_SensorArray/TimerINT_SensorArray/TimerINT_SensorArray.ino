@@ -32,7 +32,8 @@ Sensor characteristics:
 #define STOP_SPD 512
 
 #define NUM_US 0
-#define NUM_IR 3
+#define NUM_IR 5
+#define NUM_B 0
 
 #define CLOSE_INCHES 30
 #define FAR_INCHES 60
@@ -46,7 +47,7 @@ Sensor characteristics:
 #define US_FAR FAR_VOLT*AN_CONVERT
 
 //#define IR_EDGE 0.44*AN_CONVERT  //~4ft   in V
-#define IR_VOLT 1
+#define IR_VOLT .5
 #define IR_EDGE IR_VOLT*AN_CONVERT
 
 //Pinouts
@@ -77,6 +78,15 @@ Sensor characteristics:
 #define IRBL_PIN A13
 #define IRBR_PIN A14
 
+#define BFL_PIN 24
+#define BFC_PIN 25
+#define BFR_PIN 26
+#define BLSF_PIN 27
+#define BRSF_PIN 28
+#define BLSB_PIN 29
+#define BRSB_PIN 30
+#define BB_PIN 31
+
 #define LED_IR1 40
 #define LED_IR2 41
 #define LED_IR3 42
@@ -84,7 +94,7 @@ Sensor characteristics:
 #define LED_IR5 44
 #define LED_IR6 45
 #define LED_IR7 46
-
+/*
 #define LED_US1 32
 #define LED_US2 30
 #define LED_US3 31
@@ -92,7 +102,10 @@ Sensor characteristics:
 #define LED_US5 34
 #define LED_US6 35
 #define LED_US7 36
-#define LED_US8 37
+#define LED_US8 37*/
+#define US_FLAG_LED 33
+
+#define KILL_PIN 22
 
 /*
 #define LED_US_CLOSE 44
@@ -100,17 +113,24 @@ Sensor characteristics:
 #define LED_IR_FAR 46*/
 
 //Global Variables
+
+boolean timer_flag = 0;
 boolean US_flag = 0;
 boolean IR_flag = 0;
-boolean timer_flag = 0;
+
 int US_location = 0;
 int IR_location = 0;
 int US_pins[] = {USFL_PIN,USFC_PIN,USFR_PIN,USLSF_PIN,USRSF_PIN,USLSB_PIN,USRSB_PIN,USB_PIN};
 int IR_pins[] = {IRFL_PIN,IRFC_PIN,IRFR_PIN,IRL_PIN,IRR_PIN,IRBL_PIN,IRBR_PIN};
 float US_read[] = {0,0,0,0,0,0,0,0};
 float IR_read[] = {0,0,0,0,0,0,0};
+
+boolean B_flag = 0;
+int B_location = 0;
+int B_pins[] = {BFL_PIN,BFC_PIN,BFR_PIN,BLSF_PIN,BRSF_PIN,BLSB_PIN,BRSB_PIN,BB_PIN};
+
 int IR_LEDs[] = {LED_IR1,LED_IR2,LED_IR3,LED_IR4,LED_IR5,LED_IR6,LED_IR7};
-int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
+//int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
 
 void setup() {  
   int i;  
@@ -122,15 +142,26 @@ void setup() {
   //for(i=0; i< NUM_US; i++){
   for(i=0; i< NUM_US; i++){  
     pinMode(US_pins[i],INPUT);
-    pinMode(US_LEDs[i],OUTPUT);
-    digitalWrite(US_LEDs[i],LOW);
+    //pinMode(US_LEDs[i],OUTPUT);
+    //digitalWrite(US_LEDs[i],LOW);
   }
+  
+  pinMode(US_FLAG_LED,OUTPUT);
+  digitalWrite(US_FLAG_LED,LOW);
+  
   //for(i=0;i<NUM_IR;i++){
   for(i=0; i< NUM_IR; i++){
     pinMode(IR_pins[i],INPUT);
     pinMode(IR_LEDs[i],OUTPUT);
     digitalWrite(IR_LEDs[i],LOW);
   }
+  
+  for(i=0; i< NUM_B; i++){
+    pinMode(B_pins[i],INPUT);
+  }
+  pinMode(KILL_PIN,OUTPUT);
+  digitalWrite(KILL_PIN,LOW);
+  
  /*
   pinMode(LED_US_CLOSE,OUTPUT);
   pinMode(LED_GOOD,OUTPUT);
@@ -159,12 +190,14 @@ void setup() {
 
 
 void loop(){
-  RightPICSendSerial(180, 512);
-  LeftPICSendSerial(180, 512);
   if(timer_flag){
     US_location = readUS();
-    Serial.print("\n");
-    //IR_location = readIR();
+    IR_location = readIR();
+    //B_location = readB();  
+    timer_flag = 0;
+    
+    //Serial.print("\n");
+    
     //Serial.print("US_location: ");
     //Serial.print(US_location);
     //Serial.print("     ");
@@ -175,7 +208,6 @@ void loop(){
     //Serial.print("   IR Flag: ");    
     //Serial.print(IR_flag);
     //Serial.print('\n');
-    timer_flag = 0;
   }
   /*if(IR_flag){
     //RightPICSendSerial(90, STOP_SPD);
@@ -193,16 +225,27 @@ void loop(){
   
   if(IR_flag){
     digitalWrite(IR_LEDs[IR_location], HIGH);
+    //digitalWrite(KILL_PIN,HIGH);
+    
+    LeftPICSendSerial(180, 512);
+    RightPICSendSerial(180, 512);
+    delay(100);
   }else{
     for(int i=0; i<NUM_IR; i++){
       digitalWrite(IR_LEDs[i], LOW);
     }
+    digitalWrite(KILL_PIN,LOW);
+    LeftPICSendSerial(180, 850);
+    RightPICSendSerial(180, 850);
+  }
+  if(B_flag){
+    //do something
   }
   if(US_flag){
-    digitalWrite(US_LEDs[US_location], HIGH);
+    digitalWrite(US_FLAG_LED, HIGH);
   }else{
     for(int i=0; i<NUM_US; i++){
-      digitalWrite(US_LEDs[i], LOW);
+      digitalWrite(US_FLAG_LED, LOW);
     }
   }
     /*
@@ -212,6 +255,16 @@ void loop(){
   delay(200);
 }
 
+int readB(){
+  for(int i=0;i<NUM_B;i++){
+    if(digitalRead(B_pins[i])==0){ 
+        B_flag = 1;
+        return i;
+    }
+  }
+  B_flag = 0;
+  return -1;
+}
 
 int readUS(){
   int tempVal=0;
@@ -221,7 +274,7 @@ int readUS(){
   for(int i=0;i<NUM_US;i++){    
     tempVal = analogRead(US_pins[i]);
     
-    Serial.print(" P: ");
+    /*Serial.print(" P: ");
     Serial.print(US_pins[i]);
     Serial.print(" V: ");
     Serial.print(tempVal);
@@ -232,17 +285,18 @@ int readUS(){
     Serial.print(vltg);
     Serial.print(" In: ");
     inch = vltg/US_CONVERT;
-    Serial.print(inch);
+    Serial.print(inch);*/
+    
     if(tempVal < US_CLOSE){
       US_flag = 1;
       return i;
     }else if(tempVal > US_FAR){
       //US_flag = 0;
     }
-  }
-  
-  return 0;
+  }  
+  return -1;
 }
+
 int readIR(){
   int tempVal=0;
   for(int i=0;i<NUM_IR;i++){
@@ -253,12 +307,11 @@ int readIR(){
     }
   }
   IR_flag = 0;
-  return 0;
+  return -1;
 }
 
 //Serial communication protocol for the PIC on the left caster (-> T)
 void LeftPICSendSerial(int angle, int spd){
-      spd = MAX_SPD -spd;
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -268,6 +321,7 @@ void LeftPICSendSerial(int angle, int spd){
       Serial1.print('S');
       return;
 }
+
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
       Serial2.print(angle);
