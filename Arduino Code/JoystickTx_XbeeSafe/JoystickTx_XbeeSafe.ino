@@ -18,7 +18,7 @@ ex: OEOT512H512V512A
 #define PIN_TRANSMIT_TOGGLE 2
 #define PIN_TURN_TOGGLE 3
 
-#define TEAM_NUM 32
+#define TEAM_NUM 0
 
 #include <LiquidCrystal.h>
 

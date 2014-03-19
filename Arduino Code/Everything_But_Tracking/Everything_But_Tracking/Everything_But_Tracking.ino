@@ -58,7 +58,7 @@ Sensor characteristics:
 #define TURN_SPD MAX_SPD*0.75 //Remember: 0 = full back, 512 = stop, 1024 = full fwd
 #define STOP_SPD 512
 
-#define TEAM_NUM 32
+#define TEAM_NUM 0
 
 //Pinouts
 #define KILL_PIN 22
@@ -195,6 +195,7 @@ void setup() {
   TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
   sei();//allow interrupts
   
+  Serial.print("Arduino Ready");
   delay(20);
 }
 
@@ -284,8 +285,8 @@ void loop(){
           }else{
             Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
             Verti = Verti/2+256; 
-            LeftPICSendSerial(Anglei, Verti);
-            RightPICSendSerial(Anglei, Verti);  
+            LeftPICSendSerial(Anglei, STOP_SPD);
+            RightPICSendSerial(Anglei, STOP_SPD);  
           }  
         }else{
             Serial.print("Verti < BWD_LIMIT\n");                    
@@ -299,7 +300,7 @@ void loop(){
         LeftPICSendSerial(Anglei, Verti);
         RightPICSendSerial(Anglei, Verti);      
       }
-    }else{
+    }else if(Ei == 0){
       Serial.print("Ei = 0\n");
       RightPICSendSerial(Anglei, STOP_SPD);
       LeftPICSendSerial(Anglei, STOP_SPD);
@@ -312,11 +313,12 @@ void loop(){
     delay(50);
  }
   
+}
+  
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
 }
   
-}
 //Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
 int readUS(){
   int tempVal=0;    
