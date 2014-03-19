@@ -29,10 +29,10 @@ Sensor characteristics:
 
 //Constants 
   //Sensors:
-#define NUM_US 2
+#define NUM_US 8
 #define NUM_IR 0
 
-#define US_HIT_BUFFER 15
+#define US_HIT_BUFFER 1
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
 #define FAR_INCHES 40    //Approx starting distance for US
@@ -73,6 +73,15 @@ Sensor characteristics:
 #define USRSB_PIN A6
 #define USB_PIN A7
 
+#define USFL_EN 36
+#define USFC_EN 37
+#define USFR_EN 38
+#define USLSF_EN 39
+#define USRSF_EN 40
+#define USLSB_EN 41
+#define USRSB_EN 42
+#define USB_EN 43
+
 #define IRFL_PIN A8
 #define IRFC_PIN A9
 #define IRFR_PIN A10
@@ -81,6 +90,10 @@ Sensor characteristics:
 #define IRBL_PIN A13
 #define IRBR_PIN A14
 
+#define LED_US_FLAG 33
+#define LED_IR_FLAG 34
+#define LED_BP_FLAG 35
+/*
 #define LED_US1 32
 #define LED_US2 30
 #define LED_US3 31
@@ -88,7 +101,7 @@ Sensor characteristics:
 #define LED_US5 34
 #define LED_US6 35
 #define LED_US7 36
-#define LED_US8 37
+#define LED_US8 37*/
 
 //Global Variables
   //Sensors:
@@ -98,13 +111,21 @@ boolean timer_flag = 0;
 boolean stop_flag = 0;
 int US_location = 0;
 int IR_location = 0;
+int US_grpCount = 0;
+
 int US_pins[] = {USFL_PIN,USFC_PIN,USFR_PIN,USLSF_PIN,USRSF_PIN,USLSB_PIN,USRSB_PIN,USB_PIN};
+int US_grp1[] = {USFL_PIN,USRSF_PIN,USLSB_PIN};
+int US_grp2[] = {USFR_PIN,USLSF_PIN,USRSB_PIN};
+int US_grp3[] = {USFC_PIN,USB_PIN};
+
+int US_enables[] = {USFL_EN,USRSF_EN,USLSB_EN,USFR_EN,USLSF_EN,USRSB_EN,USFC_EN,USB_EN};
+
 int IR_pins[] = {IRFL_PIN,IRFC_PIN,IRFR_PIN,IRL_PIN,IRR_PIN,IRBL_PIN,IRBR_PIN};
 float US_read[] = {0,0,0,0,0,0,0,0};
 int US_hitCount[] = {0,0,0,0,0,0,0,0};
 float IR_read[] = {0,0,0,0,0,0,0};
 
-int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
+//int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
 
   //Serial:
 String inputString = "";
@@ -131,14 +152,31 @@ void setup() {
   //Sensors:  
   int i=0;
   for(i=0; i<NUM_US; i++){
-    pinMode(US_pins[i],INPUT);
+    pinMode(US_pins[i],INPUT);    
+    pinMode(US_enables[i],OUTPUT);
     
-    pinMode(US_LEDs[i],OUTPUT);
-    digitalWrite(US_LEDs[i],LOW);
+    //digitalWrite(US_LEDs[i],LOW);
+    
+    //Enable group 1 initially
+    if(i<3){
+       digitalWrite(US_enables[i],HIGH);
+    }else{
+       digitalWrite(US_enables[i],LOW);
+    }  
   }
+  
   for(i=0;i<NUM_IR;i++){
     pinMode(IR_pins[i],INPUT);
   }
+  
+  pinMode(LED_US_FLAG,OUTPUT);  
+  digitalWrite(LED_US_FLAG,LOW);
+  
+  pinMode(LED_IR_FLAG,OUTPUT);  
+  digitalWrite(LED_IR_FLAG,LOW);
+  
+  pinMode(LED_BP_FLAG,OUTPUT);  
+  digitalWrite(LED_BP_FLAG,LOW);
   
   //Serial:
   Serial.begin(9600);  //Arduino Joystick
@@ -156,14 +194,16 @@ void setup() {
   TCCR1B |= (1 << CS12) | (1 << CS10);  // Set CS12 and CS10 bits for 1024 prescaler  
   TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
   sei();//allow interrupts
+  
+  delay(20);
 }
 
 
 void loop(){
   //Sensor check:
-  if(timer_flag){
+  if(timer_flag){    
+    //IR_location = readIR();
     US_location = readUS();
-    IR_location = readIR();
     timer_flag = 0;
     /*
     //For debug
@@ -184,13 +224,15 @@ void loop(){
   //if(IR_flag){
     //killPower()
   if(US_flag){
-    digitalWrite(US_LEDs[US_location], HIGH);
+    //digitalWrite(US_LEDs[US_location], HIGH);
+    digitalWrite(LED_US_FLAG,HIGH);
     RightPICSendSerial(180, STOP_SPD);
     LeftPICSendSerial(180, STOP_SPD);
   }else{
-    for(int i=0; i<NUM_US; i++){
+    /*for(int i=0; i<NUM_US; i++){
       digitalWrite(US_LEDs[i], LOW);
-    }
+    }*/
+    digitalWrite(LED_US_FLAG,LOW);
     RightPICSendSerial(180, STOP_SPD+300);
     LeftPICSendSerial(180, STOP_SPD+300);
   }
@@ -221,11 +263,11 @@ void loop(){
       //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
       if(Verti < FWD_LIMIT){
         if(Verti > BWD_LIMIT){
-          if(Horzi > LEFT_TURN_LIMIT){
+          if(Horzi > LEFT_TURN_LIMIT){ 
               Serial.print("Horzi > LEFT_TURN_LIMIT\n");
               if(Ti){                
                 RightPICSendSerial(Anglei, (TURN_SPD));
-                LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));
+                LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD)); 
               }else{
                 RightPICSendSerial(Anglei, TURN_SPD);
                 LeftPICSendSerial(Anglei, (STOP_SPD));
@@ -234,7 +276,7 @@ void loop(){
               Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
               if(Ti){
                 LeftPICSendSerial(Anglei, (TURN_SPD));
-                RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));                 
+                RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));            
               }else{
                 LeftPICSendSerial(Anglei, TURN_SPD);
                 RightPICSendSerial(Anglei, (STOP_SPD));   
@@ -261,7 +303,7 @@ void loop(){
       Serial.print("Ei = 0\n");
       RightPICSendSerial(Anglei, STOP_SPD);
       LeftPICSendSerial(Anglei, STOP_SPD);
-      //killPower();
+      killPower();
     }    
     
     inputString = "";
@@ -270,11 +312,15 @@ void loop(){
     delay(50);
  }
   
+void killPower(){
+  digitalWrite(KILL_PIN,HIGH);
+}
   
 }
 //Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
 int readUS(){
   int tempVal=0;    
+  /*
   for(i=0;i<NUM_US;i++){
     US_read[i] = analogRead(US_pins[i]);
     if(US_read[i] < US_CLOSE){
@@ -282,9 +328,68 @@ int readUS(){
     }else if(US_read[i] > US_FAR){
       US_hitCount[i] = 0;
     }
+  }*/
+  
+  //Read thrid US group
+  if(US_grpCount == 2){
+    //Read group 3
+    for(i=0;i<2;i++){
+      US_read[i+6] = analogRead(US_grp3[i]);      
+    }    
+    //Disable group 3
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i+6],LOW);
+    }
+    //Enable group 1
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i],HIGH);
+    }          
+    US_grpCount = 0;      
+  
+  //Read second US group 
+  }else if(US_grpCount == 1){
+    //Read group 2
+    for(i=0;i<3;i++){
+      US_read[i+3] = analogRead(US_grp2[i]);
+      
+    }
+    //Disable group 2
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i+3],LOW);
+    }
+    //Enable group 3
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i+6],HIGH);
+    }      
+    US_grpCount++;
+    
+  //Read first US group
+  }else if(US_grpCount == 0){
+    //Read group 1
+    for(i=0;i<3;i++){
+      US_read[i] = analogRead(US_grp1[i]);
+    }    
+    
+    //Disable group 1
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i],LOW);
+    }
+    //Enable group 2
+    for(i=0;i<3;i++){
+       digitalWrite(US_enables[i+3],HIGH);
+    }    
+    US_grpCount++;
   }
   
+  delay(15);
+    
   for(i=0;i<NUM_US;i++){ 
+     if(US_read[i] < US_CLOSE){
+        US_hitCount[i]++;
+     }else if(US_read[i] > US_FAR){
+        US_hitCount[i] = 0;
+     }
+      
      if(US_hitCount[i]>US_HIT_BUFFER){
         US_hitCount[i] = US_HIT_BUFFER+1;  
         US_flag = 1;
@@ -391,7 +496,7 @@ void serialEvent(){
   }*/
 }
 
-ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz toggles pin 13 (LED)
+ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz 
 //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
   timer_flag=1;
 }

@@ -45,6 +45,8 @@
 #define   LMOTORDIRECTION PORTCbits.RC0
 #define   RMOTORDIRECTION PORTCbits.RC3
 
+#define   BRAKEPIN PORTDbits.RD2
+
 /** Local Function Prototypes **************************************/
 void low_isr(void);
 void high_isr(void);
@@ -69,6 +71,7 @@ void interrupt_at_low_vector(void)
 
 /** Global Variables *********************************************/
 //unsigned char lastByte;
+int brakeFlag=0;
 int lastVal=0;
 int rxAngle=0;
 int rxSpeed=0;
@@ -150,8 +153,9 @@ void main (void)
     RMOTORDIRECTION = MR_Dir;
 
     while(1){
-        //If no new signal has been recieved for 500 cycles, stop motors
-        if(i>500){
+        if(brakeFlag){ //Brake the motors if flag is set
+            BRAKEPIN = 1;
+        }else if(i>500){         //If no new signal has been recieved for 500 cycles, stop motors
             setMotorsVector(180,512);
             Delay10KTCYx(50);
         }
@@ -219,7 +223,8 @@ void setMotorsVector(int Ang,int Mag){
  //Determine wheel porportions based upon current/desired angles
     //Caster must turn to the right:
     if ((dAng)>(ANGBUFF)){
-        L_Coeff = 0.5;
+        //L_Coeff = 0.5;
+        L_Coeff = 0;
         //R_Coeff = 1-ANGCOEF*(dAng/ANGMAX);  //As the angle is closer to being correct, it TURNS slower
         R_Coeff = 1;
         /*if(R_Coeff<0){
@@ -229,7 +234,8 @@ void setMotorsVector(int Ang,int Mag){
     }else if((dAng)<(-1*ANGBUFF)){
         //L_Coeff = 1+ANGCOEF*(dAng/ANGMAX); //Add because dAng will be negative
         L_Coeff = 1;
-        R_Coeff = 0.5;
+        //R_Coeff = 0.5;
+        R_Coeff = 0;
         /*if(L_Coeff<0){
             L_Coeff = 0;
         }*/
@@ -242,6 +248,7 @@ void setMotorsVector(int Ang,int Mag){
 //Determine motor directions and calculate speed values
     //If input Mag > 512+buffer, go forwards
       if(Mag > JYBUFFER) {
+        // direction to forward
         ML_Dir = 0;
         MR_Dir = 0;
         //find pwm values
@@ -250,6 +257,7 @@ void setMotorsVector(int Ang,int Mag){
 
     //If input Mag < 512-buffer, go backwards
       } else if(Mag < (-1*JYBUFFER)){
+        // direction to backward
         ML_Dir = 1;
         MR_Dir = 1;
         //find pwm values
@@ -736,8 +744,11 @@ void high_isr(void)
 
         newByte = RCREG;
         PIR1bits.RCIF = 0; //reset flag
-
-        if((char)(newByte) == 'A'){
+        if((char)(newByte)=='B'){
+            brakeFlag = lastVal;
+            lastVal = 0;
+        }
+        else if((char)(newByte) == 'A'){
             rxAngle = lastVal;
             lastVal = 0;
         }else if((char)(newByte)== 'S'){

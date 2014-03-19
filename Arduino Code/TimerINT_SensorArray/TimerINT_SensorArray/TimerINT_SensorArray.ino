@@ -244,9 +244,9 @@ void loop(){
   if(US_flag){
     digitalWrite(US_FLAG_LED, HIGH);
   }else{
-    for(int i=0; i<NUM_US; i++){
+    //for(int i=0; i<NUM_US; i++){
       digitalWrite(US_FLAG_LED, LOW);
-    }
+    //}
   }
     /*
   digitalWrite(LED_US_CLOSE,US_flag);
