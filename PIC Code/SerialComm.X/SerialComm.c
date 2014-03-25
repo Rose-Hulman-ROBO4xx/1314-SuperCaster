@@ -157,10 +157,10 @@ void main (void)
             BRAKEPIN = 1;
         }else*/
         if(i>3000){ //If no new signal has been recieved for X cycles, stop motors
-            //setMotorsVector(180,512);
-            SetDCPWM1(0);
-            SetDCPWM2(0);
-            Delay10KTCYx(50);
+            setMotorsVector(180,512);
+            //SetDCPWM1(0);
+            //SetDCPWM2(0);
+            //Delay10KTCYx(50);
         }
 
         getAngle();
@@ -206,6 +206,7 @@ void main (void)
 void setMotorsVector(int Ang,int Mag){
     float L_Coeff = 0;
     float R_Coeff = 0;
+    float temp;
     //int currAng=0;
     int dAng=0;
 
@@ -264,6 +265,10 @@ void setMotorsVector(int Ang,int Mag){
         ML_Dir = 1;
         MR_Dir = 1;
         //find pwm values
+        temp = L_Coeff;
+        L_Coeff = R_Coeff;
+        R_Coeff = temp;
+
         ML_PWM = -1*Mag * L_Coeff;
         MR_PWM = -1*Mag * R_Coeff;
 

@@ -234,8 +234,8 @@ void loop(){
       digitalWrite(US_LEDs[i], LOW);
     }*/
     digitalWrite(LED_US_FLAG,LOW);
-    RightPICSendSerial(180, STOP_SPD+300);
-    LeftPICSendSerial(180, STOP_SPD+300);
+    //RightPICSendSerial(180, STOP_SPD+300);
+    //LeftPICSendSerial(180, STOP_SPD+300);
   }
   /*
   Serial.print(Ei);
@@ -418,11 +418,11 @@ int readIR(){
 
 //Serial communication protocol for the PIC on the left caster (-> T)
 void LeftPICSendSerial(int angle, int spd){
-      /*Serial.print("Sending to left PIC ");
+      Serial.print("Sending to left PIC:  ");
       Serial.print(angle);
       Serial.print("A ");
       Serial.print(spd);
-      Serial.print("S\n");*/
+      Serial.print("S\n");
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
@@ -434,11 +434,11 @@ void LeftPICSendSerial(int angle, int spd){
 }
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
-      /*Serial.print("Sending to right PIC: ");
+      Serial.print("Sending to right PIC: ");
       Serial.print(angle);
       Serial.print("A ");
       Serial.print(spd);
-      Serial.print("S\n");*/
+      Serial.print("S\n");
       Serial2.print(angle);
       delay(15);
       Serial2.print('A');
