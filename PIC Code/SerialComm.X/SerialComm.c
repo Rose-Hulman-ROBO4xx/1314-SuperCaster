@@ -45,7 +45,7 @@
 #define   LMOTORDIRECTION PORTCbits.RC0
 #define   RMOTORDIRECTION PORTCbits.RC3
 
-#define   BRAKEPIN PORTDbits.RD2
+//#define   BRAKEPIN PORTDbits.RD2
 
 /** Local Function Prototypes **************************************/
 void low_isr(void);
@@ -153,17 +153,20 @@ void main (void)
     RMOTORDIRECTION = MR_Dir;
 
     while(1){
-        if(brakeFlag){ //Brake the motors if flag is set
+        /*if(brakeFlag){ //Brake the motors if flag is set
             BRAKEPIN = 1;
-        }else if(i>500){         //If no new signal has been recieved for 500 cycles, stop motors
-            setMotorsVector(180,512);
+        }else*/
+        if(i>3000){ //If no new signal has been recieved for X cycles, stop motors
+            //setMotorsVector(180,512);
+            SetDCPWM1(0);
+            SetDCPWM2(0);
             Delay10KTCYx(50);
         }
 
         getAngle();
 
         if(uartFlag == 1){
-            i = 0;
+            i = 0; //feed watchdog
             getAngle();
             uartFlag = 0;
 
@@ -206,7 +209,7 @@ void setMotorsVector(int Ang,int Mag){
     //int currAng=0;
     int dAng=0;
 
-    //Center possible analog values around 0
+    //Center possible analog values around 0 [(0,1024) to (-512, 512)]
     Mag = Mag - JHALF;
     //Spread Mag to from (-512, 512) to (-1024, 1024) (For PWM duty cycle)
     Mag = 2*Mag;
@@ -224,7 +227,7 @@ void setMotorsVector(int Ang,int Mag){
     //Caster must turn to the right:
     if ((dAng)>(ANGBUFF)){
         //L_Coeff = 0.5;
-        L_Coeff = 0;
+        L_Coeff = .1;
         //R_Coeff = 1-ANGCOEF*(dAng/ANGMAX);  //As the angle is closer to being correct, it TURNS slower
         R_Coeff = 1;
         /*if(R_Coeff<0){
@@ -235,7 +238,7 @@ void setMotorsVector(int Ang,int Mag){
         //L_Coeff = 1+ANGCOEF*(dAng/ANGMAX); //Add because dAng will be negative
         L_Coeff = 1;
         //R_Coeff = 0.5;
-        R_Coeff = 0;
+        R_Coeff = .1;
         /*if(L_Coeff<0){
             L_Coeff = 0;
         }*/
@@ -744,11 +747,12 @@ void high_isr(void)
 
         newByte = RCREG;
         PIR1bits.RCIF = 0; //reset flag
-        if((char)(newByte)=='B'){
+        /*if((char)(newByte)=='B'){
             brakeFlag = lastVal;
             lastVal = 0;
         }
-        else if((char)(newByte) == 'A'){
+        else */
+        if((char)(newByte) == 'A'){
             rxAngle = lastVal;
             lastVal = 0;
         }else if((char)(newByte)== 'S'){

@@ -246,7 +246,7 @@ void loop(){
   Serial.print('H');
   Serial.print(Verti);
   Serial.print('V');
-  Serial.print(Angi);
+  Serial.print(Anglei);
   Serial.print("A\n");*/
   
   //Serial:  
@@ -461,6 +461,10 @@ int StringToInt(String str){
 void serialEvent(){
   while(Serial.available()){
     char inChar = (char) Serial.read() - TEAM_NUM;
+    
+    //Serial.print(inChar);
+    //Serial.print('\n');
+    
     if(inChar=='A'){
       Ang = inputString;
       inputString = "";
