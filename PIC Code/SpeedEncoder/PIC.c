@@ -168,7 +168,7 @@ void main (void)
         /*if(brakeFlag){ //Brake the motors if flag is set
             BRAKEPIN = 1;
         }else*/
-        if(i>3000){ //If no new signal has been recieved for X cycles, stop motors
+        if(i>1000){ //If no new signal has been recieved for X cycles, stop motors
             setMotorsVector(180,512);
             //SetDCPWM1(0);
             //SetDCPWM2(0);
@@ -812,7 +812,7 @@ void high_isr(void)
 	  INTCONbits.TMR0IF = 0; 
 	  WriteTimer0(TIMERSTART);
 	  speed = (count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
-	  
+	  count = 0;
 }
 
 /******************************************************************
