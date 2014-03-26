@@ -30,12 +30,13 @@ Sensor characteristics:
 //Constants 
   //Sensors:
 #define NUM_US 8
-#define NUM_IR 0
+#define NUM_IR 4
+#define NUM_B 1
 
 #define US_HIT_BUFFER 1
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
-#define FAR_INCHES 40    //Approx starting distance for US
+#define FAR_INCHES 50    //Approx starting distance for US
 
 #define AN_CONVERT 1023/5
 
@@ -62,6 +63,7 @@ Sensor characteristics:
 
 //Pinouts
 #define KILL_PIN 22
+#define RC_PIN 50
 
   //Sensors:
 #define USFL_PIN A2
@@ -90,6 +92,15 @@ Sensor characteristics:
 #define IRBL_PIN A13
 #define IRBR_PIN A14
 
+#define BFL_PIN 24
+#define BFC_PIN 25
+#define BFR_PIN 26
+#define BLSF_PIN 27
+#define BRSF_PIN 28
+#define BLSB_PIN 29
+#define BRSB_PIN 30
+#define BB_PIN 31
+
 #define LED_US_FLAG 33
 #define LED_IR_FLAG 34
 #define LED_BP_FLAG 35
@@ -107,10 +118,13 @@ Sensor characteristics:
   //Sensors:
 boolean US_flag = 0;
 boolean IR_flag = 0;
+boolean B_flag = 0;
 boolean timer_flag = 0;
 boolean stop_flag = 0;
+
 int US_location = 0;
 int IR_location = 0;
+int B_location = 0;
 int US_grpCount = 0;
 
 int US_pins[] = {USFL_PIN,USFC_PIN,USFR_PIN,USLSF_PIN,USRSF_PIN,USLSB_PIN,USRSB_PIN,USB_PIN};
@@ -121,6 +135,8 @@ int US_grp3[] = {USFC_PIN,USB_PIN};
 int US_enables[] = {USFL_EN,USRSF_EN,USLSB_EN,USFR_EN,USLSF_EN,USRSB_EN,USFC_EN,USB_EN};
 
 int IR_pins[] = {IRFL_PIN,IRFC_PIN,IRFR_PIN,IRL_PIN,IRR_PIN,IRBL_PIN,IRBR_PIN};
+int B_pins[] = {BFL_PIN,BFC_PIN,BFR_PIN,BLSF_PIN,BRSF_PIN,BLSB_PIN,BRSB_PIN,BB_PIN};
+
 float US_read[] = {0,0,0,0,0,0,0,0};
 int US_hitCount[] = {0,0,0,0,0,0,0,0};
 float IR_read[] = {0,0,0,0,0,0,0};
@@ -149,6 +165,8 @@ void setup() {
   pinMode(KILL_PIN,OUTPUT);
   digitalWrite(KILL_PIN,LOW);
   
+  pinMode(RC_PIN,INPUT_PULLUP);
+  
   //Sensors:  
   int i=0;
   for(i=0; i<NUM_US; i++){
@@ -167,6 +185,10 @@ void setup() {
   
   for(i=0;i<NUM_IR;i++){
     pinMode(IR_pins[i],INPUT);
+  }
+  
+  for(i=0; i< NUM_B; i++){
+    pinMode(B_pins[i],INPUT);
   }
   
   pinMode(LED_US_FLAG,OUTPUT);  
@@ -202,123 +224,150 @@ void setup() {
 
 void loop(){
   //Sensor check:
-  if(timer_flag){    
-    //IR_location = readIR();
-    US_location = readUS();
-    timer_flag = 0;
-    /*
-    //For debug
-    Serial.print("US_location: ");
-    Serial.print(US_location);
-    Serial.print("     ");
-    //Serial.print("IR_location: ");
-    //Serial.print(IR_location);
-    Serial.print("   US Flag: ");
-    Serial.print(US_flag);
-    //Serial.print("   IR Flag: ");    
-    //Serial.print(IR_flag);
-    Serial.print('\n');*/
+  if(digitalRead(RC_PIN) == LOW){
+    //Run Tracking and enable safety sensors
+    if(timer_flag){    
+      IR_location = readIR();
+      US_location = readUS();
+      B_location = readB();
+      timer_flag = 0;
+      /*
+      //For debug
+      Serial.print("US_location: ");
+      Serial.print(US_location);
+      Serial.print("     ");
+      //Serial.print("IR_location: ");
+      //Serial.print(IR_location);
+      Serial.print("   US Flag: ");
+      Serial.print(US_flag);
+      //Serial.print("   IR Flag: ");    
+      //Serial.print(IR_flag);
+      Serial.print('\n');*/
+      
+    }
     
-  }
-  
-  //Stop_flag = IR_flag|US_flag;
-  //if(IR_flag){
-    //killPower()
-  if(US_flag){
-    //digitalWrite(US_LEDs[US_location], HIGH);
-    digitalWrite(LED_US_FLAG,HIGH);
-    RightPICSendSerial(180, STOP_SPD);
-    LeftPICSendSerial(180, STOP_SPD);
-  }else{
-    /*for(int i=0; i<NUM_US; i++){
-      digitalWrite(US_LEDs[i], LOW);
-    }*/
-    digitalWrite(LED_US_FLAG,LOW);
-    //RightPICSendSerial(180, STOP_SPD+300);
-    //LeftPICSendSerial(180, STOP_SPD+300);
-  }
-  /*
-  Serial.print(Ei);
-  Serial.print('E');
-  Serial.print(Ti);
-  Serial.print('T');
-  Serial.print(Horzi);
-  Serial.print('H');
-  Serial.print(Verti);
-  Serial.print('V');
-  Serial.print(Anglei);
-  Serial.print("A\n");*/
-  
-  //Serial:  
- if(stringComplete){ 
-    Ei = StringToInt(E);
-    Ti = StringToInt(T);
-    Si = StringToInt(S);
-    Horzi = StringToInt(Horz);
-    Verti = StringToInt(Vert);
-    //Verti = Verti * (MAX_SPD/1024);
-    Anglei = StringToInt(Ang);
-    Anglei = Anglei*0.352;
-   
-    if((Ei == 1) && (US_flag ==0)){
-      //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
-      if(Verti < FWD_LIMIT){
-        if(Verti > BWD_LIMIT){
-          if(Horzi > LEFT_TURN_LIMIT){ 
-              Serial.print("Horzi > LEFT_TURN_LIMIT\n");
-              if(Ti){                
-                RightPICSendSerial(Anglei, (TURN_SPD));
-                LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD)); 
-              }else{
-                RightPICSendSerial(Anglei, TURN_SPD);
-                LeftPICSendSerial(Anglei, (STOP_SPD));
-              }
-          }else if(Horzi < RIGHT_TURN_LIMIT){
-              Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
-              if(Ti){
-                LeftPICSendSerial(Anglei, (TURN_SPD));
-                RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));            
-              }else{
-                LeftPICSendSerial(Anglei, TURN_SPD);
-                RightPICSendSerial(Anglei, (STOP_SPD));   
-              }           
-          }else{
-            Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
-            Verti = Verti/2+256; 
-            LeftPICSendSerial(Anglei, STOP_SPD);
-            RightPICSendSerial(Anglei, STOP_SPD);  
-          }  
-        }else{
-            Serial.print("Verti < BWD_LIMIT\n");                    
-            Verti = Verti/2+256; 
-            LeftPICSendSerial(Anglei, Verti);
-            RightPICSendSerial(Anglei, Verti);  
-        }    
-      }else{
-        Serial.print("Verti > FWD_LIMIT\n");           
-        Verti = Verti/2+256; 
-        LeftPICSendSerial(Anglei, Verti);
-        RightPICSendSerial(Anglei, Verti);      
-      }
-    }else if(Ei == 0){
-      Serial.print("Ei = 0\n");
-      RightPICSendSerial(Anglei, STOP_SPD);
-      LeftPICSendSerial(Anglei, STOP_SPD);
+    //Stop_flag = IR_flag|US_flag;
+    if(IR_flag){
       killPower();
-    }    
+    }
+    if(B_flag|US_flag){
+      //digitalWrite(US_LEDs[US_location], HIGH);
+      digitalWrite(LED_US_FLAG,US_flag);
+      digitalWrite(LED_BP_FLAG,B_flag);
+      RightPICSendSerial(180, STOP_SPD);
+      LeftPICSendSerial(180, STOP_SPD);
+    }else{
+      /*for(int i=0; i<NUM_US; i++){
+        digitalWrite(US_LEDs[i], LOW);
+      }*/
+      digitalWrite(LED_US_FLAG,LOW);
+      digitalWrite(LED_BP_FLAG,LOW);
+      
+      
+      
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
+      RightPICSendSerial(180, STOP_SPD+300);
+      LeftPICSendSerial(180, STOP_SPD+300);
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
+      
+      
+      
+    }
+    /*
+    Serial.print(Ei);
+    Serial.print('E');
+    Serial.print(Ti);
+    Serial.print('T');
+    Serial.print(Horzi);
+    Serial.print('H');
+    Serial.print(Verti);
+    Serial.print('V');
+    Serial.print(Anglei);
+    Serial.print("A\n");*/
     
-    inputString = "";
-    stringComplete = false;
- 
-    delay(50);
+ }else{ //RC_PIN is high
+    //Serial:  
+   if(stringComplete){ 
+      Ei = StringToInt(E);
+      Ti = StringToInt(T);
+      Si = StringToInt(S);
+      Horzi = StringToInt(Horz);
+      Verti = StringToInt(Vert);
+      //Verti = Verti * (MAX_SPD/1024);
+      Anglei = StringToInt(Ang);
+      Anglei = Anglei*0.352;
+     
+      if((Ei == 1) && (US_flag ==0)){
+        //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
+        if(Verti < FWD_LIMIT){
+          if(Verti > BWD_LIMIT){
+            if(Horzi > LEFT_TURN_LIMIT){ 
+                Serial.print("Horzi > LEFT_TURN_LIMIT\n");
+                if(Ti){                
+                  RightPICSendSerial(Anglei, (TURN_SPD));
+                  LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD)); 
+                }else{
+                  RightPICSendSerial(Anglei, TURN_SPD);
+                  LeftPICSendSerial(Anglei, (STOP_SPD));
+                }
+            }else if(Horzi < RIGHT_TURN_LIMIT){
+                Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
+                if(Ti){
+                  LeftPICSendSerial(Anglei, (TURN_SPD));
+                  RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));            
+                }else{
+                  LeftPICSendSerial(Anglei, TURN_SPD);
+                  RightPICSendSerial(Anglei, (STOP_SPD));   
+                }           
+            }else{
+              Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
+              Verti = Verti/2+256; 
+              LeftPICSendSerial(Anglei, STOP_SPD);
+              RightPICSendSerial(Anglei, STOP_SPD);  
+            }  
+          }else{
+              Serial.print("Verti < BWD_LIMIT\n");                    
+              Verti = Verti/2+256; 
+              LeftPICSendSerial(Anglei, Verti);
+              RightPICSendSerial(Anglei, Verti);  
+          }    
+        }else{
+          Serial.print("Verti > FWD_LIMIT\n");           
+          Verti = Verti/2+256; 
+          LeftPICSendSerial(Anglei, Verti);
+          RightPICSendSerial(Anglei, Verti);      
+        }
+      }else if(Ei == 0){
+        Serial.print("Ei = 0\n");
+        RightPICSendSerial(Anglei, STOP_SPD);
+        LeftPICSendSerial(Anglei, STOP_SPD);
+        killPower();
+      }    
+      
+      inputString = "";
+      stringComplete = false;
+   
+      delay(50);
+   }
  }
-  
 }
   
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
 }
-  
+
+//Read all of the bump sensor values, return the array index of the triggered bump sensor. 
+int readB(){
+  for(int i=0;i<NUM_B;i++){
+    if(digitalRead(B_pins[i])==0){ 
+        B_flag = 1;
+        return i;
+    }
+  }
+  B_flag = 0;
+  return -1;
+}
+
 //Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
 int readUS(){
   int tempVal=0;    
