@@ -33,7 +33,7 @@ Sensor characteristics:
 #define NUM_IR 4
 #define NUM_B 1
 
-#define US_HIT_BUFFER 1
+#define US_HIT_BUFFER 0
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
 #define FAR_INCHES 50    //Approx starting distance for US
@@ -472,6 +472,7 @@ void LeftPICSendSerial(int angle, int spd){
       Serial.print("A ");
       Serial.print(spd);
       Serial.print("S\n");
+      spd = 1023-spd;
       Serial1.print(angle);
       delay(15);
       Serial1.print('A');
