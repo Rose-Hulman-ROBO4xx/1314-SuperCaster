@@ -250,10 +250,14 @@ void loop(){
     if(IR_flag){
       killPower();
     }
-    if(B_flag|US_flag){
+    if(B_flag){
       //digitalWrite(US_LEDs[US_location], HIGH);
-      digitalWrite(LED_US_FLAG,US_flag);
       digitalWrite(LED_BP_FLAG,B_flag);
+      RightPICSendSerial(180, STOP_SPD);
+      LeftPICSendSerial(180, STOP_SPD);
+      delay(5000);
+    }else if(US_flag){      
+      digitalWrite(LED_US_FLAG,US_flag);      
       RightPICSendSerial(180, STOP_SPD);
       LeftPICSendSerial(180, STOP_SPD);
     }else{
