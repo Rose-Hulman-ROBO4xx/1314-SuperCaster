@@ -159,7 +159,7 @@ int Si = 0;      //Transmit State
 int Ti = 0;      //Tight Turn
 int Ei = 0;      //Emergency Stop
 int Anglei = 180;  //Desired Angle
-
+int trackSpeed = 0;
 
 void setup() {
   pinMode(KILL_PIN,OUTPUT);
@@ -217,82 +217,14 @@ void setup() {
   TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
   sei();//allow interrupts
   
-  delay(50);
-  Serial.print('1');
+  delay(100);
+//  Serial.print('1');
 }
 
 
 void loop(){
-  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate
   //Sensor check:
-  if(digitalRead(RC_PIN) == LOW){
-    //Run Tracking and enable safety sensors
-    if(timer_flag){    
-      IR_location = readIR();
-      US_location = readUS();
-      B_location = readB();
-      timer_flag = 0;
-      /*
-      //For debug
-      Serial.print("US_location: ");
-      Serial.print(US_location);
-      Serial.print("     ");
-      //Serial.print("IR_location: ");
-      //Serial.print(IR_location);
-      Serial.print("   US Flag: ");
-      Serial.print(US_flag);
-      //Serial.print("   IR Flag: ");    
-      //Serial.print(IR_flag);
-      Serial.print('\n');*/
-      
-    }
-    
-    //Stop_flag = IR_flag|US_flag;
-    if(IR_flag){
-      killPower();
-    }
-    if(B_flag){
-      //digitalWrite(US_LEDs[US_location], HIGH);
-      digitalWrite(LED_BP_FLAG,B_flag);
-      RightPICSendSerial(180, STOP_SPD);
-      LeftPICSendSerial(180, STOP_SPD);
-      delay(5000);
-    }else if(US_flag){      
-      digitalWrite(LED_US_FLAG,US_flag);      
-      RightPICSendSerial(180, STOP_SPD);
-      LeftPICSendSerial(180, STOP_SPD);
-    }else{
-      /*for(int i=0; i<NUM_US; i++){
-        digitalWrite(US_LEDs[i], LOW);
-      }*/
-      digitalWrite(LED_US_FLAG,LOW);
-      digitalWrite(LED_BP_FLAG,LOW);
-      
-      
-      
-//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
-      RightPICSendSerial(180, STOP_SPD+300);
-      LeftPICSendSerial(180, STOP_SPD+300);
-//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
-      
-      
-      
-    }
-    /*
-    Serial.print(Ei);
-    Serial.print('E');
-    Serial.print(Ti);
-    Serial.print('T');
-    Serial.print(Horzi);
-    Serial.print('H');
-    Serial.print(Verti);
-    Serial.print('V');
-    Serial.print(Anglei);
-    Serial.print("A\n");*/
-    
- }else{ //RC_PIN is high
-    //Serial:  
-   if(stringComplete){ 
+  if(stringComplete){ 
       Ei = StringToInt(E);
       Ti = StringToInt(T);
       Si = StringToInt(S);
@@ -300,6 +232,29 @@ void loop(){
       Verti = StringToInt(Vert);
       //Verti = Verti * (MAX_SPD/1024);
       Anglei = StringToInt(Ang);
+      inputString = "";
+      stringComplete = false;
+  
+    if(Ei==0){
+       killPower();
+       delay(1000);
+    }
+    
+    if(Si==1){    
+      //Run Tracking and enable all safety sensors
+      if(timer_flag){    
+        updateTrackingSensors(); 
+      }
+      
+      trackSpeed = Anglei;
+      
+      //TODO: Calculate tracking angle and send speed, angle to PICs
+      
+   }else{ //Si is 0, go into remote control, only checking bump and cliff sensors       
+       if(timer_flag){
+         updateRCSensors();
+       }
+      //Serial:  
       Anglei = Anglei*0.352;
      
       if((Ei == 1) && (US_flag ==0)){
@@ -307,7 +262,6 @@ void loop(){
         if(Verti < FWD_LIMIT){
           if(Verti > BWD_LIMIT){
             if(Horzi > LEFT_TURN_LIMIT){ 
-                Serial.print("Horzi > LEFT_TURN_LIMIT\n");
                 if(Ti){                
                   RightPICSendSerial(Anglei, (TURN_SPD));
                   LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD)); 
@@ -316,7 +270,6 @@ void loop(){
                   LeftPICSendSerial(Anglei, (STOP_SPD));
                 }
             }else if(Horzi < RIGHT_TURN_LIMIT){
-                Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
                 if(Ti){
                   LeftPICSendSerial(Anglei, (TURN_SPD));
                   RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));            
@@ -325,40 +278,83 @@ void loop(){
                   RightPICSendSerial(Anglei, (STOP_SPD));   
                 }           
             }else{
-              Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
-              Verti = Verti/2+256; 
               LeftPICSendSerial(Anglei, STOP_SPD);
               RightPICSendSerial(Anglei, STOP_SPD);  
             }  
           }else{
-              Serial.print("Verti < BWD_LIMIT\n");                    
               Verti = Verti/2+256; 
               LeftPICSendSerial(Anglei, Verti);
               RightPICSendSerial(Anglei, Verti);  
           }    
         }else{
-          Serial.print("Verti > FWD_LIMIT\n");           
           Verti = Verti/2+256; 
           LeftPICSendSerial(Anglei, Verti);
           RightPICSendSerial(Anglei, Verti);      
-        }
-      }else if(Ei == 0){
-        Serial.print("Ei = 0\n");
-        RightPICSendSerial(Anglei, STOP_SPD);
+        }  
+      }else{
         LeftPICSendSerial(Anglei, STOP_SPD);
-        killPower();
-      }    
-      
-      inputString = "";
-      stringComplete = false;
-   
-      delay(50);
+        RightPICSendSerial(Anglei, STOP_SPD);  
+      }  
+      delay(50);   
    }
- }
+  }
 }
   
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
+}
+
+void updateTrackingSensors(){ 
+  IR_location = readIR();
+  US_location = readUS();
+  B_location = readB();
+  timer_flag = 0;      
+  
+  //Stop_flag = IR_flag|US_flag;
+  if(IR_flag){
+    killPower();
+  }
+  if(B_flag){
+    //digitalWrite(US_LEDs[US_location], HIGH);
+    digitalWrite(LED_BP_FLAG,B_flag);
+    RightPICSendSerial(180, STOP_SPD);
+    LeftPICSendSerial(180, STOP_SPD);
+    delay(5000);
+  }else if(US_flag){      
+    digitalWrite(LED_US_FLAG,US_flag);      
+    RightPICSendSerial(180, STOP_SPD);
+    LeftPICSendSerial(180, STOP_SPD);
+  }else{
+    /*for(int i=0; i<NUM_US; i++){
+      digitalWrite(US_LEDs[i], LOW);
+    }*/
+    digitalWrite(LED_US_FLAG,LOW);
+    digitalWrite(LED_BP_FLAG,LOW);
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
+     // RightPICSendSerial(180, STOP_SPD+300);
+      //LeftPICSendSerial(180, STOP_SPD+300);
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
+  }
+}
+
+void updateRCSensors(){ 
+  IR_location = readIR();
+  B_location = readB();
+  timer_flag = 0;      
+  
+  //Stop_flag = IR_flag|US_flag;
+  if(IR_flag){
+    killPower();
+  }
+  if(B_flag){
+    //digitalWrite(US_LEDs[US_location], HIGH);
+    digitalWrite(LED_BP_FLAG,B_flag);
+    RightPICSendSerial(180, STOP_SPD);
+    LeftPICSendSerial(180, STOP_SPD);
+    delay(5000);
+  }else{
+    digitalWrite(LED_BP_FLAG,LOW);   
+  }
 }
 
 //Read all of the bump sensor values, return the array index of the triggered bump sensor. 
@@ -472,11 +468,6 @@ int readIR(){
 
 //Serial communication protocol for the PIC on the left caster (-> T)
 void LeftPICSendSerial(int angle, int spd){
-      Serial.print("Sending to left PIC:  ");
-      Serial.print(angle);
-      Serial.print("A ");
-      Serial.print(spd);
-      Serial.print("S\n");
       spd = 1023-spd;
       Serial1.print(angle);
       delay(15);
@@ -489,11 +480,6 @@ void LeftPICSendSerial(int angle, int spd){
 }
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
-      Serial.print("Sending to right PIC: ");
-      Serial.print(angle);
-      Serial.print("A ");
-      Serial.print(spd);
-      Serial.print("S\n");
       Serial2.print(angle);
       delay(15);
       Serial2.print('A');
@@ -559,6 +545,7 @@ void serialEvent(){
 
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz 
 //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
+  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate
   timer_flag=1;
 }
  

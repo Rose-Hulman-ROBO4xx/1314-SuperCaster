@@ -20,6 +20,9 @@ ex: OEOT512H512V512A
 
 #define TEAM_NUM 0
 
+#define MIN_TRACK_SPEED 10 // MIN and MAX track speed are percentages of max speed
+#define MAX_TRACK_SPEED 90
+
 #include <LiquidCrystal.h>
 
 // initialize the library with the numbers of the interface pins
@@ -66,6 +69,15 @@ void loop(){
     Transmit = digitalRead(PIN_TRANSMIT_TOGGLE);
     Turn = digitalRead(PIN_TURN_TOGGLE);
     EStop = digitalRead(PIN_ESTOP);
+    
+    if(Tracking==1){      
+        if((Angle*0.0976)<MIN_TRACK_SPEED){
+          Angle = MIN_TRACK_SPEED*10.24;
+        }
+        else if((Angle*0.0976) > MAX_TRACK_SPEED){
+          Angle = MAX_TRACK_SPEED*10.24
+        }
+    }
     
     if (Tracking==0) {
       //if(RxReady==1){
@@ -116,28 +128,47 @@ void loop(){
 }
     
 void LCDUpdate(){
-  lcd.setCursor(0,0);
-  lcd.print("                    ");
-  lcd.setCursor(0,0);
-  lcd.print("Tx:");
-  lcd.print((1-Transmit));  
-  lcd.print("  S:");
-  lcd.print(EStop);  
-  lcd.setCursor(10,0);
-  lcd.print("H:");
-  lcd.print(Horz);  
-  lcd.setCursor(0,1);
-  lcd.print("                    ");
-  lcd.setCursor(0, 1);  
-  lcd.print("A:");  
-  Angle = Angle * 0.3515;  
-  lcd.print(Angle);  
-  lcd.setCursor(6,1);
-  lcd.print("T:");
-  lcd.print(Turn);    
-  lcd.setCursor(10,1);
-  lcd.print("V:");
-  lcd.print(Vert);
+  if (Tracking==0) {
+    lcd.setCursor(0,0);
+    lcd.print("                    ");
+    lcd.setCursor(0,0);
+    lcd.print("Tx:");
+    lcd.print(RxReady);
+    lcd.print("  S:");
+    lcd.print(EStop);  
+    lcd.setCursor(10,0);
+    lcd.print("H:");
+    lcd.print(Horz);  
+    lcd.setCursor(0,1);
+    lcd.print("                    ");
+    lcd.setCursor(0, 1);  
+    lcd.print("A:");  
+    Angle = Angle * 0.3515;  
+    lcd.print(Angle);  
+    lcd.setCursor(6,1);
+    lcd.print("T:");
+    lcd.print(Turn);    
+    lcd.setCursor(10,1);
+    lcd.print("V:");
+    lcd.print(Vert);
+    
+  }else{
+    lcd.setCursor(0,0);
+    lcd.print("                    ");
+    lcd.setCursor(0,0);
+    lcd.print("Track: "); 
+    
+    lcd.print(RxReady);
+    lcd.print("  S:");
+    lcd.print(EStop);  
+    lcd.setCursor(0,1);    
+    lcd.print("                    ");
+    lcd.setCursor(0, 1);  
+    lcd.print("Set Speed:"); 
+    lcd.print(Angle); 
+    lcd.print("%");
+  }
+  
 }
 
 void sendNumber(int num){
