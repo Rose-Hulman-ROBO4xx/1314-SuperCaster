@@ -15,10 +15,11 @@ ex: OEOT512H512V512A
 
 #define PIN_ESTOP 22
 #define PIN_ANGLE_POT A7
-#define PIN_TRANSMIT_TOGGLE 2
+#define PIN_TRACKING_TOGGLE 2
 #define PIN_TURN_TOGGLE 3
 
 #define TEAM_NUM 0
+#define RXWATCHDOG 20
 
 #define MIN_TRACK_SPEED 10 // MIN and MAX track speed are percentages of max speed
 #define MAX_TRACK_SPEED 90
@@ -34,6 +35,7 @@ int Tracking;
 int Turn;
 int EStop;
 int RxReady;
+int RxCnt=0;
 char thousand;
 char hundreds;
 char tens;
@@ -55,27 +57,32 @@ void setup(){
   pinMode(PIN_LED_TRANSMIT, OUTPUT);
   
   pinMode(PIN_ESTOP,INPUT_PULLUP);
-  pinMode(PIN_TRANSMIT_TOGGLE, INPUT_PULLUP);
+  pinMode(PIN_TRACKING_TOGGLE, INPUT_PULLUP);
   pinMode(PIN_TURN_TOGGLE, INPUT_PULLUP);
 }
 
 void loop(){
-  if(RxReady){
-    digitalWrite(PIN_LED_POWER,HIGH);
+  digitalWrite(PIN_LED_POWER,HIGH);    
+  Horz = analogRead(PIN_HORZ_ANALOG);
+  Vert = analogRead(PIN_VERT_ANALOG);
+  Angle = analogRead(PIN_ANGLE_POT);
+  Tracking = digitalRead(PIN_TRACKING_TOGGLE);
+  Turn = digitalRead(PIN_TURN_TOGGLE);
+  EStop = digitalRead(PIN_ESTOP);
+  
+  RxCnt++;
+  if(RxCnt>RXWATCHDOG){
+     RxReady = 0;
+  }  
     
-    Horz = analogRead(PIN_HORZ_ANALOG);
-    Vert = analogRead(PIN_VERT_ANALOG);
-    Angle = analogRead(PIN_ANGLE_POT);
-    Transmit = digitalRead(PIN_TRANSMIT_TOGGLE);
-    Turn = digitalRead(PIN_TURN_TOGGLE);
-    EStop = digitalRead(PIN_ESTOP);
+  if(RxReady){
     
     if(Tracking==1){      
         if((Angle*0.0976)<MIN_TRACK_SPEED){
           Angle = MIN_TRACK_SPEED*10.24;
         }
         else if((Angle*0.0976) > MAX_TRACK_SPEED){
-          Angle = MAX_TRACK_SPEED*10.24
+          Angle = MAX_TRACK_SPEED*10.24;
         }
     }
     
@@ -96,7 +103,7 @@ void loop(){
         sendChar('A');
       //}
     }else{
-        sendOneNumber(0);
+        sendOneNumber(EStop);
         sendChar('E');
         sendOneNumber(Tracking);    
         sendChar('S');
@@ -113,21 +120,22 @@ void loop(){
     
     LCDUpdate();
     
-    if (!Tracking){
-      digitalWrite(PIN_LED_TRANSMIT,HIGH);
-    }else{
-      digitalWrite(PIN_LED_TRANSMIT,LOW);
-    }
-    if (!Turn){
-      digitalWrite(PIN_LED_TURN,HIGH);
-    }else{
-      digitalWrite(PIN_LED_TURN,LOW);
-    }
+    //if (!Tracking){
+      //digitalWrite(PIN_LED_TRANSMIT,HIGH);
+    //}else{
+     // digitalWrite(PIN_LED_TRANSMIT,LOW);
+    //}
+    //if (!Turn){
+     // digitalWrite(PIN_LED_TURN,HIGH);
+    //}else{
+    //  digitalWrite(PIN_LED_TURN,LOW);
+    //}
     delay(100);
-  }
+  
 }
     
 void LCDUpdate(){
+  int LCDAng = 0;
   if (Tracking==0) {
     lcd.setCursor(0,0);
     lcd.print("                    ");
@@ -143,8 +151,8 @@ void LCDUpdate(){
     lcd.print("                    ");
     lcd.setCursor(0, 1);  
     lcd.print("A:");  
-    Angle = Angle * 0.3515;  
-    lcd.print(Angle);  
+    LCDAng = Angle * 0.3515;  
+    lcd.print(LCDAng);  
     lcd.setCursor(6,1);
     lcd.print("T:");
     lcd.print(Turn);    
@@ -156,16 +164,16 @@ void LCDUpdate(){
     lcd.setCursor(0,0);
     lcd.print("                    ");
     lcd.setCursor(0,0);
-    lcd.print("Track: "); 
-    
+    lcd.print("Track:");     
     lcd.print(RxReady);
-    lcd.print("  S:");
-    lcd.print(EStop);  
+    lcd.print(" Stop:");
+    lcd.print((1-EStop));  
     lcd.setCursor(0,1);    
     lcd.print("                    ");
     lcd.setCursor(0, 1);  
-    lcd.print("Set Speed:"); 
-    lcd.print(Angle); 
+    lcd.print("   Speed:");
+    LCDAng = Angle*0.098;
+    lcd.print(LCDAng); 
     lcd.print("%");
   }
   
@@ -206,7 +214,8 @@ void serialEvent(){
   while(Serial.available()){
     char inChar = (char) Serial.read() - TEAM_NUM;
     if(inChar <= 57 && inChar >= 48){
-      RxReady = inChar-48;
+      RxReady = inChar-48;      
+      RxCnt=0;
     }
   }
 }

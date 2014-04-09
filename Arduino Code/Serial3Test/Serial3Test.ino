@@ -201,7 +201,7 @@ void setup() {
   digitalWrite(LED_BP_FLAG,LOW);
   
   //Serial:
-  Serial.begin(9600);  //Arduino Remote Control
+  Serial3.begin(9600);  //Arduino Remote Control
   Serial1.begin(9600);  //Left Caster PIC
   Serial2.begin(9600);  //Right Caster PIC  
   inputString.reserve(200);
@@ -245,29 +245,19 @@ void loop(){
       if(timer_flag){    
         updateTrackingSensors(); 
       }
-      if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
-        //trackSpeed = Anglei;
-        trackSpeed = Horzi;
-        //TODO: Calculate tracking angle and send speed, angle to PICs
       
-        //Temporary tester:
-        RightPICSendSerial(180, trackSpeed);
-        LeftPICSendSerial(180, trackSpeed);
+      trackSpeed = Anglei;
       
-      
-      }else{
-        RightPICSendSerial(180, STOP_SPD);
-        LeftPICSendSerial(180, STOP_SPD);
-      }
+      //TODO: Calculate tracking angle and send speed, angle to PICs
       
    }else{ //Si is 0, go into remote control, only checking bump and cliff sensors       
-     if(timer_flag){
-       updateRCSensors();
-     }
+       if(timer_flag){
+         updateRCSensors();
+       }
       //Serial:  
       Anglei = Anglei*0.352;
      
-      if((!B_flag)&&(!IR_flag)&&(Ei == 1)){
+      if((Ei == 1) && (US_flag ==0)){
         //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
         if(Verti < FWD_LIMIT){
           if(Verti > BWD_LIMIT){
@@ -305,8 +295,8 @@ void loop(){
         LeftPICSendSerial(Anglei, STOP_SPD);
         RightPICSendSerial(Anglei, STOP_SPD);  
       }  
-      delay(10);   
-     }
+      delay(50);   
+   }
   }
 }
   
@@ -329,7 +319,7 @@ void updateTrackingSensors(){
     digitalWrite(LED_BP_FLAG,B_flag);
     RightPICSendSerial(180, STOP_SPD);
     LeftPICSendSerial(180, STOP_SPD);
-    delay(200);
+    delay(5000);
   }else if(US_flag){      
     digitalWrite(LED_US_FLAG,US_flag);      
     RightPICSendSerial(180, STOP_SPD);
@@ -340,6 +330,10 @@ void updateTrackingSensors(){
     }*/
     digitalWrite(LED_US_FLAG,LOW);
     digitalWrite(LED_BP_FLAG,LOW);
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
+     // RightPICSendSerial(180, STOP_SPD+300);
+      //LeftPICSendSerial(180, STOP_SPD+300);
+//--------------!!!!!!!!!!!!!!!!!DEMO ONLY!!!!!!!!!!!!!!!!!!!!!!!-----------------------------: 
   }
 }
 
@@ -355,9 +349,9 @@ void updateRCSensors(){
   if(B_flag){
     //digitalWrite(US_LEDs[US_location], HIGH);
     digitalWrite(LED_BP_FLAG,B_flag);
-    RightPICSendSerial((Anglei*0.352), STOP_SPD);
-    LeftPICSendSerial((Anglei*0.352), STOP_SPD);
-    delay(200);
+    RightPICSendSerial(180, STOP_SPD);
+    LeftPICSendSerial(180, STOP_SPD);
+    delay(5000);
   }else{
     digitalWrite(LED_BP_FLAG,LOW);   
   }
@@ -506,11 +500,11 @@ int StringToInt(String str){
 
 //Serial Rx from remote control
 void serialEvent(){
-  while(Serial.available()){
-    char inChar = (char) Serial.read() - TEAM_NUM;
+  while(Serial3.available()){
+    char inChar = (char) Serial3.read() - TEAM_NUM;
     
-    //Serial.print(inChar);
-    //Serial.print('\n');
+    Serial.print(inChar);
+    Serial.print('\n');
     
     if(inChar=='A'){
       Ang = inputString;
@@ -551,7 +545,7 @@ void serialEvent(){
 
 ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz 
 //generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
-  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate
+  Serial3.print('1'); // Tell Remote Control that master arduino is ready to communicate
   timer_flag=1;
 }
  
