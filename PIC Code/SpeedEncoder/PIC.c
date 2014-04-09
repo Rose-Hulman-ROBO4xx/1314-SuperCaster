@@ -47,7 +47,14 @@
 
 //#define   BRAKEPIN PORTDbits.RD2
 #define   SEGMENTS   32 
-#define   TIMERSTART   64755 //triggers every .1 second
+#define   TIMER0START   64755 //triggers every .1 second
+//PID controller values
+#define AERRORLIMIT 120 //in rpm, can be adjusted
+#define KP	1
+#define KI	.1
+#define KD	1
+#define PIDTIMER	100
+
 /** Local Function Prototypes **************************************/
 void low_isr(void);
 void high_isr(void);
@@ -85,9 +92,14 @@ char line2[20];
 int uartFlag;
 
 int count=0;
-float speed=0;
+float current_speed=0;
 int state=0;//0=black,1=white 
 
+int a_error = 0;
+int p_error = 0;
+int d_error = 0;
+int PIDcount = 0;
+int Mag = 0;
 
 
 /*****************************************************************
@@ -162,13 +174,13 @@ void main (void)
     
     //Open timer
     OpenTimer0( TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_128 );
-  	WriteTimer0(TIMERSTART);
+  	WriteTimer0(TIMER0START);
 
     while(1){
         /*if(brakeFlag){ //Brake the motors if flag is set
             BRAKEPIN = 1;
         }else*/
-        if(i>1000){ //If no new signal has been recieved for X cycles, stop motors
+        if(i>500){ //If no new signal has been recieved for X cycles, stop motors
             setMotorsVector(180,512);
             //SetDCPWM1(0);
             //SetDCPWM2(0);
@@ -218,13 +230,32 @@ void main (void)
 
 ******************************************************************/
 
-void setMotorsVector(int Ang,int Mag){
+void setMotorsVector(int Ang,int set_speed){
     float L_Coeff = 0;
     float R_Coeff = 0;
     float temp;
     //int currAng=0;
     int dAng=0;
-
+	
+	
+	//PID control
+	//set_speed comes in as rpm
+	int error = set_speed - current_speed;
+	
+	
+	int output = PIDContrl(error);
+	
+	//replace with real transfer funtion
+	int set_speed_pwm = set_speed;
+	int output_pwm = output; 
+	
+	//use this when using PID
+	//Mag = Mag + output_pwm;
+	//use this for no PID but arduino sending down RPM values
+	Mag = set_speed_pwm;
+	//use this with arduino sending down pwm values
+	Mag = set_speed;
+	
     //Center possible analog values around 0 [(0,1024) to (-512, 512)]
     Mag = Mag - JHALF;
     //Spread Mag to from (-512, 512) to (-1024, 1024) (For PWM duty cycle)
@@ -777,6 +808,44 @@ void getIR(void)
 	} 
         
 }	
+
+/*****************************************************************
+* Function:      int PIDControl(int error)
+* Input:	int error , difference between input speed and actual speed in rpm
+* Output:	int output, speed to set the motors at
+* Overview: Reads the IR sensor and increments the count
+******************************************************************/
+int PIDControl(int error)
+{
+	//PID variables
+	int kd = 1;
+	int ki = 1;
+	int kp = 1;
+	
+	PIDcount = PIDcount + 1;
+	
+	if(PIDcount > PIDTIMER){//update the integral and derivative terms
+	int a_error = a_error + error;
+	int d_error = a_error - p_error;
+	if(a_error > A_ERROR_LIMIT){
+		a_error = A_ERROR_LIMIT;
+		}	
+	PIDcount = 0;
+	}
+	
+	//get values
+	int prop = KP*error;
+	int integ = KI*a_error;
+	int deriv - KD*d_error;
+	
+	output = prop + integ + deriv;
+	
+	
+	
+	p_error = error;
+	return output;	
+}
+	
 /*****************************************************************
 * Function:        void high_isr(void)
 * Input:
@@ -811,7 +880,7 @@ void high_isr(void)
     {
 	  INTCONbits.TMR0IF = 0; 
 	  WriteTimer0(TIMERSTART);
-	  speed = (count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
+	  current_speed = (count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
 	  count = 0;
 }
 
