@@ -119,15 +119,13 @@ Sensor characteristics:
 #define RIGHT_MOTOR_PIN 9
 #define SERVO_PIN 3
 
-#define buffering 25 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
-#define sample_delay 10 //Number of edges detected before polling for value
-#define sample_size 10 //Number of samples taken before decision is made.
+#define buffering 15 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
+#define sample_delay 5 //Number of edges detected before polling for value
+#define antenna_sample_size 20 //Number of samples taken before decision is made.
 #define STOP_LEVEL_MAX 120
 #define STOP_LEVEL_MIN 50
 
-#define LEFT_TURN 60 //Increase angle
-#define RIGHT_TURN 70 //Decrease in Angle ("PARALLAX" FACING FORWARD)
-#define HOLD 65
+
 
 uint16_t caliset = 0;
 volatile uint16_t voltage = 0;
@@ -137,7 +135,7 @@ int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 1;
+boolean move_enabled = 0;
 boolean toggle = 0;
 volatile int estate = LOW;
 int angle_2_casters = 180;
@@ -145,7 +143,7 @@ Servo antenna_servo;
 boolean ant_read_flag = false;
 boolean samples_full = false;
 int num_samples_taken = 0;
-uint16_t voltageReadings[sample_size];
+uint16_t voltageReadings[antenna_sample_size];
 
 
 //////
@@ -260,115 +258,7 @@ void setup() {
 
 
 void loop(){
-  //Sensor check:
-//  if(timer_flag){
-//    US_location = readUS();
-//    IR_location = readIR();
-//    timer_flag = 0;
-//    /*
-//    //For debug
-//    Serial.print("US_location: ");
-//    Serial.print(US_location);
-//    Serial.print("     ");
-//    //Serial.print("IR_location: ");
-//    //Serial.print(IR_location);
-//    Serial.print("   US Flag: ");
-//    Serial.print(US_flag);
-//    //Serial.print("   IR Flag: ");    
-//    //Serial.print(IR_flag);
-//    Serial.print('\n');*/
-//    
-//  }
-//  
-//  //Stop_flag = IR_flag|US_flag;
-//  //if(IR_flag){
-//    //killPower()
-//  if(US_flag){
-//    digitalWrite(US_LEDs[US_location], HIGH);
-//    RightPICSendSerial(180, STOP_SPD);
-//    LeftPICSendSerial(180, STOP_SPD);
-//  }else{
-//    for(int i=0; i<NUM_US; i++){
-//      digitalWrite(US_LEDs[i], LOW);
-//    }
-//    RightPICSendSerial(180, STOP_SPD+300);
-//    LeftPICSendSerial(180, STOP_SPD+300);
-//  }
-  /*
-  Serial.print(Ei);
-  Serial.print('E');
-  Serial.print(Ti);
-  Serial.print('T');
-  Serial.print(Horzi);
-  Serial.print('H');
-  Serial.print(Verti);
-  Serial.print('V');
-  Serial.print(Angi);
-  Serial.print("A\n");*/
   
-  //Serial:  
-// if(stringComplete){ 
-//    Ei = StringToInt(E);
-//    Ti = StringToInt(T);
-//    Si = StringToInt(S);
-//    Horzi = StringToInt(Horz);
-//    Verti = StringToInt(Vert);
-//    //Verti = Verti * (MAX_SPD/1024);
-//    Anglei = StringToInt(Ang);
-//    Anglei = Anglei*0.352;
-//   
-//    if((Ei == 1) && (US_flag ==0)){
-//      //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
-//      if(Verti < FWD_LIMIT){
-//        if(Verti > BWD_LIMIT){
-//          if(Horzi > LEFT_TURN_LIMIT){
-//              Serial.print("Horzi > LEFT_TURN_LIMIT\n");
-//              if(Ti){                
-//                RightPICSendSerial(Anglei, (TURN_SPD));
-//                LeftPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));
-//              }else{
-//                RightPICSendSerial(Anglei, TURN_SPD);
-//                LeftPICSendSerial(Anglei, (STOP_SPD));
-//              }
-//          }else if(Horzi < RIGHT_TURN_LIMIT){
-//              Serial.print("Horzi < RIGHT_TURN_LIMIT\n");
-//              if(Ti){
-//                LeftPICSendSerial(Anglei, (TURN_SPD));
-//                RightPICSendSerial(Anglei, (MAX_SPD-TURN_SPD));                 
-//              }else{
-//                LeftPICSendSerial(Anglei, TURN_SPD);
-//                RightPICSendSerial(Anglei, (STOP_SPD));   
-//              }           
-//          }else{
-//            Serial.print("RIGHT_TURN_LIMIT < Horzi < LEFT_TURN_LIMIT\n");           
-//            Verti = Verti/2+256; 
-//            LeftPICSendSerial(Anglei, Verti);
-//            RightPICSendSerial(Anglei, Verti);  
-//          }  
-//        }else{
-//            Serial.print("Verti < BWD_LIMIT\n");                    
-//            Verti = Verti/2+256; 
-//            LeftPICSendSerial(Anglei, Verti);
-//            RightPICSendSerial(Anglei, Verti);  
-//        }    
-//      }else{
-//        Serial.print("Verti > FWD_LIMIT\n");           
-//        Verti = Verti/2+256; 
-//        LeftPICSendSerial(Anglei, Verti);
-//        RightPICSendSerial(Anglei, Verti);      
-//      }
-//    }else{
-//      Serial.print("Ei = 0\n");
-//      RightPICSendSerial(Anglei, STOP_SPD);
-//      LeftPICSendSerial(Anglei, STOP_SPD);
-//      //killPower();
-//    }    
-//    
-//    inputString = "";
-//    stringComplete = false;
-// 
-//    delay(50);
-
 
 
 ////////ANT Stuff
@@ -389,49 +279,88 @@ void loop(){
   }
   
   
-  //delay(60);
-    angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MIN_ANG,MAX_ANG);
-//  RightPICSendSerial(angle_2_casters, STOP_SPD);
-//  LeftPICSendSerial(angle_2_casters, STOP_SPD);
-  if(ant_read_flag){
-    ant_read_flag = 0;
-    if (voltage < STOP_LEVEL_MAX && voltage > STOP_LEVEL_MIN){
-      Serial.print("Stop Movement ");
-
+  angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MIN_ANG,MAX_ANG);
+  if(samples_full){
+    handleAntennaReadings();
+  }
+ 
+}
+//Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
+void handleAntennaReadings(){
+    samples_full = 0;
+    int num_stop = 0;
+    int num_hold = 0;
+    int num_increase = 0;
+    int num_decrease = 0;
+    for(int i = 0; i < antenna_sample_size; i+=1){
+    if (voltageReadings[i] < STOP_LEVEL_MAX && voltageReadings[i] > STOP_LEVEL_MIN){
+      num_stop+=1;
     } else {
-      if (voltage > (caliset - buffering) && voltage < (caliset + buffering)) { //drive forward
-        Serial.print("Hold angle ");
+      if (voltageReadings[i] > (caliset - buffering) && voltageReadings[i] < (caliset + buffering)) { //drive forward
+        num_hold+=1;
     }
    
-    if (voltage < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
-      Serial.print("Decrease angle ");
+    if (voltageReadings[i] < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
+    num_decrease+=1;
+
+    }
+    
+    if (voltageReadings[i] > (caliset + buffering)){  //turn the other way
+    num_increase+=1;
+
+    }
+  }
+ }
+ 
+ samples_full = 0; //Data processed, reset flag, and tell interupt it can begin to fill buffer up again.
+ num_samples_taken = 0;
+ 
+ int sample_array_f[4] = {num_stop, num_hold, num_increase,num_decrease};
+ char case_num = 0;
+ for(int i = 0; i < 4; i+=1){
+   if(sample_array_f[i] > sample_array_f[case_num]) case_num = i;
+ }
+ switch (case_num) {
+  case 0:
+     //Serial.print("Stop Movement ");
+    break;
+   case 1:
+     //Serial.print("Hold angle ");
+     break;
+   case 2:
+     //Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
-    }
-    
-    if (voltage > (caliset + buffering)){  //turn the other way
-      Serial.print("Increase angle ");
+     break;
+   case 3:
+     //Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
-    }
-  }
-  Serial.print("In, Cal\t");
-  Serial.print(voltage);
-  Serial.print("\t");
-  Serial.print(caliset);
-  Serial.print(" Position ");
-  Serial.print(current_pos_micro);
-  Serial.print(" Cast Ang ");
-  Serial.println(angle_2_casters);
-  RightPICSendSerial(angle_2_casters, STOP_SPD);
-  LeftPICSendSerial(angle_2_casters, STOP_SPD);
-}
+      break;
+   default:
+     //Serial.print("Error ");
+     break;
+ }
  
-
+//  Serial.print("In, Cal\t");
+//  Serial.print(voltage);
+//  Serial.print("\t");
+//  Serial.print(caliset);
+//  Serial.print(" Position ");
+//  Serial.print(current_pos_micro);
+//  Serial.print(" Agreed ");
+//  Serial.println(sample_array_f[case_num]);
+//  Serial.print(" Cast Ang ");
+//  Serial.print(angle_2_casters);
+  
+//  RightPICSendSerial(angle_2_casters, STOP_SPD);
+//  LeftPICSendSerial(angle_2_casters, STOP_SPD); 
+  
 }
-//Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
+
+
 int readUS(){
   int tempVal=0;    
   for(i=0;i<NUM_US;i++){
@@ -562,7 +491,7 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
     estate = !estate;
     edge_count = 0;
     voltage = analogRead(SPEAKER_FROM_WALKIETALKIE);
-    if (num_samples_taken < sample_size){
+    if (num_samples_taken < antenna_sample_size){
     voltageReadings[num_samples_taken] = voltage;
     num_samples_taken +=1;
     } else {
@@ -584,10 +513,11 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
       }
     }
     interrupt_count_servo = 0;
+    antenna_servo.writeMicroseconds(current_pos_micro);
     //
   } else interrupt_count_servo+=1;
   //moveantenna
-  antenna_servo.writeMicroseconds(current_pos_micro);
+  //antenna_servo.writeMicroseconds(current_pos_micro);
   //Antenna Reading
   //Sensor Timer
   if (sensor_timer_count == 100) {
