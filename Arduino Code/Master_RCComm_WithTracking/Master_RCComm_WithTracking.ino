@@ -106,21 +106,12 @@ Sensor characteristics:
 #define LED_US_FLAG 33
 #define LED_IR_FLAG 34
 #define LED_BP_FLAG 35
-/*
-#define LED_US1 32
-#define LED_US2 30
-#define LED_US3 31
-#define LED_US4 33
-#define LED_US5 34
-#define LED_US6 35
-#define LED_US7 36
-#define LED_US8 37*/
 
 
 //Antenna Defines
 //////ANT STUFF
 #define ANT_WAVEFORM 8
-#
+
  
     // variable to store the servo position 
 #define MIN_POS 1000 //120 Degrees
@@ -177,8 +168,6 @@ int B_pins[] = {BFL_PIN,BFC_PIN,BFR_PIN,BLSF_PIN,BRSF_PIN,BLSB_PIN,BRSB_PIN,BB_P
 float US_read[] = {0,0,0,0,0,0,0,0};
 int US_hitCount[] = {0,0,0,0,0,0,0,0};
 float IR_read[] = {0,0,0,0,0,0,0};
-
-//int US_LEDs[] = {LED_US1,LED_US2,LED_US3,LED_US4,LED_US5,LED_US6,LED_US7,LED_US8};
 
   //Serial:
 String inputString = "";
@@ -265,7 +254,7 @@ void setup() {
   inputString.reserve(200);
   
   //Antenna Pins
-   pinMode(ANT_WAVEFORM,OUTPUT);
+  pinMode(ANT_WAVEFORM,OUTPUT);
   pinMode(SPEAKER_FROM_WALKIETALKIE, INPUT);
   pinMode(LEFT_MOTOR_PIN,OUTPUT);
   pinMode(RIGHT_MOTOR_PIN,OUTPUT);
@@ -321,6 +310,7 @@ void setup() {
 
 void loop(){
   //Sensor check:
+  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate 
   if(stringComplete){ 
       Ei = StringToInt(E);
       Ti = StringToInt(T);
@@ -334,41 +324,36 @@ void loop(){
   
     if(Ei==0){
        killPower();
-       delay(1000);
     }
     
     if(Si==1){    
       //Run Tracking and enable all safety sensors
       if(timer_flag){    
         updateTrackingSensors();
-        Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate 
       }
       
-      //Antenna Readings, no caster movement
+      //Antenna Readings, no caster movement, calculate tracking angle
       angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MIN_ANG,MAX_ANG);
         if(samples_full){
           handleAntennaReadings();
         }
-      
+        
       if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
         trackSpeed = Verti;
-        //TODO: Calculate tracking angle and send speed, angle to PICs
+        //TODO:  and send speed, angle to PICs
       
-        //Temporary tester:
-        RightPICSendSerial(180, trackSpeed);
-        LeftPICSendSerial(180, trackSpeed);
-        //Actual code
-        
+       
+        RightPICSendSerial(angle_2_casters, trackSpeed);
+        LeftPICSendSerial(angle_2_casters, trackSpeed);        
         
       }else{
-        RightPICSendSerial(180, STOP_SPD);
-        LeftPICSendSerial(180, STOP_SPD);
+        RightPICSendSerial(angle_2_casters, STOP_SPD);
+        LeftPICSendSerial(angle_2_casters, STOP_SPD);
       }
       
    }else{ //Si is 0, go into remote control, only checking bump and cliff sensors       
      if(timer_flag){
        updateRCSensors();
-       Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate
      }
       //Serial:  
       Anglei = Anglei*0.352;
@@ -418,6 +403,7 @@ void loop(){
   
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
+  delay(1000);
 }
 
 void updateTrackingSensors(){ 
