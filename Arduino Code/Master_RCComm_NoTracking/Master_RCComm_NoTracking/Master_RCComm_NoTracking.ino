@@ -246,8 +246,7 @@ void loop(){
         updateTrackingSensors(); 
       }
       if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
-        //trackSpeed = Anglei;
-        trackSpeed = Horzi;
+        trackSpeed = Verti;
         //TODO: Calculate tracking angle and send speed, angle to PICs
       
         //Temporary tester:
