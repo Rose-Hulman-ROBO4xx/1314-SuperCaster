@@ -198,7 +198,7 @@ int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 0;
+boolean move_enabled = 1;
 boolean toggle = 0;
 volatile int estate = LOW;
 int angle_2_casters = 180;
@@ -419,13 +419,13 @@ void updateTrackingSensors(){
   if(B_flag){
     //digitalWrite(US_LEDs[US_location], HIGH);
     digitalWrite(LED_BP_FLAG,B_flag);
-    RightPICSendSerial(180, STOP_SPD);
-    LeftPICSendSerial(180, STOP_SPD);
+    RightPICSendSerial(angle_2_casters, STOP_SPD);
+    LeftPICSendSerial(angle_2_casters, STOP_SPD);
     delay(200);
   }else if(US_flag){      
     digitalWrite(LED_US_FLAG,US_flag);      
-    RightPICSendSerial(180, STOP_SPD);
-    LeftPICSendSerial(180, STOP_SPD);
+    RightPICSendSerial(angle_2_casters, STOP_SPD);
+    LeftPICSendSerial(angle_2_casters, STOP_SPD);
   }else{
     /*for(int i=0; i<NUM_US; i++){
       digitalWrite(US_LEDs[i], LOW);

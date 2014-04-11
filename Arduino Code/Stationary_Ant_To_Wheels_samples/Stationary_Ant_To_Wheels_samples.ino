@@ -135,7 +135,7 @@ int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 0;
+boolean move_enabled = 1;
 boolean toggle = 0;
 volatile int estate = LOW;
 int angle_2_casters = 180;
@@ -322,36 +322,39 @@ void handleAntennaReadings(){
  }
  switch (case_num) {
   case 0:
-     //Serial.print("Stop Movement ");
+     Serial.print("Stop Movement ");
     break;
    case 1:
-     //Serial.print("Hold angle ");
+     Serial.print("Hold angle ");
      break;
    case 2:
-     //Serial.print("Decrease angle ");
+     Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
      break;
    case 3:
-     //Serial.print("Increase angle ");
+     Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
       break;
    default:
-     //Serial.print("Error ");
+     Serial.print("Error ");
      break;
  }
  
-//  Serial.print("In, Cal\t");
-//  Serial.print(voltage);
-//  Serial.print("\t");
-//  Serial.print(caliset);
-//  Serial.print(" Position ");
-//  Serial.print(current_pos_micro);
-//  Serial.print(" Agreed ");
-//  Serial.println(sample_array_f[case_num]);
+  Serial.print("In, Cal\t");
+  Serial.print(voltage);
+  Serial.print("\t");
+  Serial.print(caliset);
+  Serial.print(" Position ");
+  Serial.print(current_pos_micro);
+  Serial.print(" goal ");
+  Serial.print(goal_ang_micro);
+  Serial.print(" Agreed ");
+  Serial.println(sample_array_f[case_num]);
+  
 //  Serial.print(" Cast Ang ");
 //  Serial.print(angle_2_casters);
   

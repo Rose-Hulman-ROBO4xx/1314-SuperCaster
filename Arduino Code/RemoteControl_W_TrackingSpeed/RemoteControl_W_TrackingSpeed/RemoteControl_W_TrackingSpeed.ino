@@ -69,6 +69,7 @@ void loop(){
   Tracking = digitalRead(PIN_TRACKING_TOGGLE);
   Turn = digitalRead(PIN_TURN_TOGGLE);
   EStop = digitalRead(PIN_ESTOP);
+  EStop = 1;
   
   RxCnt++;
   if(RxCnt>RXWATCHDOG){
