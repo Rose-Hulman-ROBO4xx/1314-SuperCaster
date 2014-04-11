@@ -114,11 +114,11 @@ Sensor characteristics:
 
  
     // variable to store the servo position 
-#define MIN_POS 1000 //120 Degrees
-#define MAX_POS 2100  //240 Degrees
-#define DELAY 5
-#define DEFAULT_SERVO_M 1550
-#define N180_DEG_M 1550
+#define MIN_POS 750 //120 Degrees
+#define MAX_POS 1850  //240 Degrees
+#define DELAY 2
+#define DEFAULT_SERVO_M 1275
+#define N180_DEG_M 1275
 #define DEFAULT_SERVO 90 
 #define STEP 2
 #define SERVO_TURN 20
@@ -135,7 +135,7 @@ Sensor characteristics:
 #define RIGHT_MOTOR_PIN 9
 #define SERVO_PIN 3
 
-#define buffering 15 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
+#define buffering 10 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
 #define sample_delay 5 //Number of edges detected before polling for value
 #define antenna_sample_size 20 //Number of samples taken before decision is made.
 #define STOP_LEVEL_MAX 120
@@ -333,7 +333,7 @@ void loop(){
       }
       
       //Antenna Readings, no caster movement, calculate tracking angle
-      angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MIN_ANG,MAX_ANG);
+      angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MAX_ANG,MIN_ANG);
         if(samples_full){
           handleAntennaReadings();
         }
