@@ -655,13 +655,13 @@ void handleAntennaReadings(){
         num_hold+=1;
     }
    
-    if (voltageReadings[i] < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
-    num_decrease+=1;
+    if (voltageReadings[i] < (caliset -buffering)){ //turn  
+    num_increase+=1;
 
     }
     
     if (voltageReadings[i] > (caliset + buffering)){  //turn the other way
-    num_increase+=1;
+    num_decrease+=1;
 
     }
   }
