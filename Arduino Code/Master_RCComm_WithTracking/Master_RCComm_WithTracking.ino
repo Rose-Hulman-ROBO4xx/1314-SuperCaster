@@ -65,7 +65,7 @@ Sensor characteristics:
 
 //Pinouts
 #define KILL_PIN 22
-#define RC_PIN 50
+#define RC_PIN 46
 
   //Sensors:
 #define USFL_PIN A2
@@ -77,14 +77,14 @@ Sensor characteristics:
 #define USRSB_PIN A6
 #define USB_PIN A7
 
-#define USFL_EN 36
-#define USFC_EN 37
-#define USFR_EN 38
-#define USLSF_EN 39
-#define USRSF_EN 40
-#define USLSB_EN 41
-#define USRSB_EN 42
-#define USB_EN 43
+#define USFL_EN 11
+#define USFC_EN 12
+#define USFR_EN 13
+#define USLSF_EN 10
+#define USRSF_EN 9
+#define USLSB_EN 8
+#define USRSB_EN 7
+#define USB_EN 6
 
 #define IRFL_PIN A8
 #define IRFC_PIN A9
@@ -94,23 +94,23 @@ Sensor characteristics:
 #define IRBL_PIN A13
 #define IRBR_PIN A14
 
-#define BFL_PIN 24
+#define BFL_PIN 23
 #define BFC_PIN 25
-#define BFR_PIN 26
-#define BLSF_PIN 27
-#define BRSF_PIN 28
-#define BLSB_PIN 29
-#define BRSB_PIN 30
-#define BB_PIN 31
+#define BFR_PIN 27
+#define BLSF_PIN 29
+#define BRSF_PIN 31
+#define BLSB_PIN 33
+#define BRSB_PIN 35
+#define BB_PIN 37
 
-#define LED_US_FLAG 33
-#define LED_IR_FLAG 34
-#define LED_BP_FLAG 35
+#define LED_US_FLAG 30
+#define LED_IR_FLAG 32
+#define LED_BP_FLAG 34
 
 
 //Antenna Defines
 //////ANT STUFF
-#define ANT_WAVEFORM 8
+#define ANT_WAVEFORM 2
 
  
     // variable to store the servo position 
@@ -128,11 +128,10 @@ Sensor characteristics:
 #define MAX_ANG 240
 
 #define SPEAKER_FROM_WALKIETALKIE A15 //set input pin
-#define CALIBRATE_IN 48
-#define RADIO_POWER 46
-#define RADIO_VOL_UP 47
-#define LEFT_MOTOR_PIN  10
-#define RIGHT_MOTOR_PIN 9
+#define CALIBRATE_IN 44
+#define RADIO_POWER 24
+#define RADIO_VOL_UP 26
+#define RADIO_VOL_DWN 28
 #define SERVO_PIN 3
 
 #define buffering 10 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
@@ -256,14 +255,10 @@ void setup() {
   //Antenna Pins
   pinMode(ANT_WAVEFORM,OUTPUT);
   pinMode(SPEAKER_FROM_WALKIETALKIE, INPUT);
-  pinMode(LEFT_MOTOR_PIN,OUTPUT);
-  pinMode(RIGHT_MOTOR_PIN,OUTPUT);
   pinMode(CALIBRATE_IN, INPUT);
   pinMode(RADIO_POWER,OUTPUT);
   pinMode(RADIO_VOL_UP,OUTPUT);
   digitalWrite(CALIBRATE_IN, HIGH);
-  digitalWrite(LEFT_MOTOR_PIN,HIGH);
-  digitalWrite(RIGHT_MOTOR_PIN,HIGH);
 
   //Serial.println("Set Output mode");
   antenna_servo.attach(3);  // attaches the servo on pin 9 to the servo object
