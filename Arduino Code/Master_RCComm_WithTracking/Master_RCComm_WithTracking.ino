@@ -77,13 +77,13 @@ Sensor characteristics:
 #define USRSB_PIN A6
 #define USB_PIN A7
 
-#define USFL_EN 11
-#define USFC_EN 12
+#define USFL_EN 12
+#define USFC_EN 9
 #define USFR_EN 13
-#define USLSF_EN 10
-#define USRSF_EN 9
-#define USLSB_EN 8
-#define USRSB_EN 7
+#define USLSF_EN 8
+#define USRSF_EN 11
+#define USLSB_EN 7
+#define USRSB_EN 10
 #define USB_EN 6
 
 #define IRFL_PIN A8
