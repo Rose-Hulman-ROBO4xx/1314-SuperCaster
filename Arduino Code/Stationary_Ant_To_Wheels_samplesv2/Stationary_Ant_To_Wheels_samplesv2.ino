@@ -94,7 +94,7 @@ Sensor characteristics:
 #define LED_US8 37
 
 //////ANT STUFF
-#define ANT_WAVEFORM 8
+#define ANT_WAVEFORM 2
 #
  
     // variable to store the servo position 
@@ -125,6 +125,13 @@ Sensor characteristics:
 #define STOP_LEVEL_MAX 120
 #define STOP_LEVEL_MIN 50
 
+//Enumerators for direction determination
+#define STOP_MOV 1
+#define HOLD_ANG 2
+#define INC_ANG 3
+#define DEC_ANG 4
+#define ERROR_CALC -1
+
 
 
 uint16_t caliset = 0;
@@ -145,8 +152,8 @@ Servo antenna_servo;
 boolean ant_read_flag = false;
 boolean samples_full = false;
 int num_samples_taken = 0;
-uint16_t voltageReadings_1[antenna_sample_size];
-uint16_t voltageReadings_2[antenna_sample_size];
+uint16_t voltageReadings_1[antenna_sample_size]; //array for rising edge samples
+uint16_t voltageReadings_2[antenna_sample_size]; //array for falling edge samples
 
 
 //////
@@ -289,9 +296,9 @@ void loop(){
   if(samples_full){
     handleAntennaReadings();
   }
- Serial.print("Loop ");
- Serial.println(voltage_1);
- delay(50);
+// Serial.print("Loop ");
+// Serial.println(num_samples_taken);
+ delay(5);
 }
 //Reads all values of the ultrasonic sensors, returns the array index of a sensor detecting an object
 void handleAntennaReadings(){
@@ -300,25 +307,42 @@ void handleAntennaReadings(){
     int num_increase = 0;
     int num_decrease = 0;
     for(int i = 0; i < antenna_sample_size; i+=1){
-    if (voltageReadings_1[i] < STOP_LEVEL_MAX && voltageReadings_1[i] > STOP_LEVEL_MIN){
-      num_stop+=1;
-    } else {
-      if (voltageReadings_1[i] > (caliset - buffering) && voltageReadings_1[i] < (caliset + buffering)) { //drive forward
-        num_hold+=1;
-    }
-   
-    if (voltageReadings_1[i] < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
-    num_decrease+=1;
+//    if (voltageReadings_1[i] < STOP_LEVEL_MAX && voltageReadings_1[i] > STOP_LEVEL_MIN){
+//      determine_array[0]+=1;
+//    } else {
+//      if (voltageReadings_1[i] > (caliset - buffering) && voltageReadings_1[i] < (caliset + buffering)) { //drive forward
+//        determine_array[1]+=1;
+//    }
+//   
+//    if (voltageReadings_1[i] < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
+//    determine_array[2]+=1;
+//
+//    }
+//    
+//    if (voltageReadings_1[i] > (caliset + buffering)){  //turn the other way
+//    determine_array[3]+=1;
+//
+//    }
+//  }
 
+    int determined_move = determine_direction_from_sample(voltageReadings_1[i],voltageReadings_2[i]);
+    switch(determined_move) {
+      case STOP_MOV:
+        num_stop+=1;
+        break;
+      case HOLD_ANG:
+         num_hold+=1;
+         break;
+       case INC_ANG:
+         num_increase+=1;
+         break;
+       case DEC_ANG: 
+          num_decrease+=1;
+          break;
+        default:
+          break;
     }
-    
-    if (voltageReadings_1[i] > (caliset + buffering)){  //turn the other way
-    num_increase+=1;
-
-    }
-  }
  }
- 
  samples_full = 0; //Data processed, reset flag, and tell interupt it can begin to fill buffer up again.
  num_samples_taken = 0;
  
@@ -358,7 +382,7 @@ void handleAntennaReadings(){
   Serial.print("\t");
   Serial.print(caliset);
   Serial.print(" Position ");
-  Serial.print(current_pos_micro);
+  Serial.println(current_pos_micro);
   
 //  Serial.print(" Agreed ");
 //  Serial.print(sample_array_f[case_num]);
@@ -368,6 +392,27 @@ void handleAntennaReadings(){
 //  RightPICSendSerial(angle_2_casters, STOP_SPD);
 //  LeftPICSendSerial(angle_2_casters, STOP_SPD); 
   
+}
+
+int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t voltageReading_fall){
+    if (voltageReading_rise < STOP_LEVEL_MAX && voltageReading_rise > STOP_LEVEL_MIN){
+      return STOP_MOV;
+    } else {
+      if (voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering)) { //drive forward
+        return HOLD_ANG;
+    }
+   
+    if (voltageReading_rise < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
+    return INC_ANG;
+
+    }
+    
+    if (voltageReading_rise > (caliset + buffering)){  //turn the other way
+    return DEC_ANG;
+
+    }
+  }
+  return ERROR_CALC;
 }
 
 
@@ -497,8 +542,9 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
   digitalWrite(ANT_WAVEFORM,toggle);
   toggle = toggle^1;
   edge_count+=1;
-  if (second_sample_flag && samples_full == 1) {
+  if (second_sample_flag && samples_full != 1) {
    voltage_2 =  analogRead(SPEAKER_FROM_WALKIETALKIE);
+   //Serial.println("Store 2");
    voltageReadings_2[num_samples_taken] = voltage_2;
    num_samples_taken +=1;
    second_sample_flag = 0;
@@ -509,6 +555,8 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
     voltage_1 = analogRead(SPEAKER_FROM_WALKIETALKIE);
     if (num_samples_taken < antenna_sample_size){
     voltageReadings_1[num_samples_taken] = voltage_1;
+    second_sample_flag = 1;
+    //Serial.println("Store 1");
     } else {
       samples_full = 1;
     }
