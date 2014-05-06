@@ -123,14 +123,15 @@ void main (void)
     ADCON2 = 0x00;
 
     //    ADCON2 = 0xA9;        //### Acquisition delay 12 TAD, A/D conversion clock 8TOSC, Right Justified
-    TRISA = 0xFF;  //port A all input
+    TRISA = 0xFE;  //port A all input
     TRISC = 0x80;  //port C RC7 is serial comm input
     TRISB = 0xFF;  //port B all input
-    TRISD = 0x00;
+    TRISD = 0xFF;  //port D all input
 
     //Initialize outputs
     PORTC = 0x00;
-    PORTD = 0x00;
+    PORTA.RA0 = 0;
+    //PORTD = 0x00;
 
     //Initialize PWM channels
     OpenTimer2(TIMER_INT_OFF & T2_PS_1_16);
@@ -319,14 +320,14 @@ int getAngle(){
     int pos = 0;
     int rotEncoder[8];
 
-    rotEncoder[0] = PORTBbits.RB0;
-    rotEncoder[1] = PORTBbits.RB1;
-    rotEncoder[2] = PORTBbits.RB2;
-    rotEncoder[3] = PORTBbits.RB3;
-    rotEncoder[4] = PORTBbits.RB4;
-    rotEncoder[5] = PORTBbits.RB5;
-    rotEncoder[6] = PORTBbits.RB6;
-    rotEncoder[7] = PORTBbits.RB7;
+    rotEncoder[0] = PORTDbits.RD0;
+    rotEncoder[1] = PORTDbits.RD1;
+    rotEncoder[2] = PORTDbits.RD2;
+    rotEncoder[3] = PORTDbits.RD3;
+    rotEncoder[4] = PORTDbits.RD4;
+    rotEncoder[5] = PORTDbits.RD5;
+    rotEncoder[6] = PORTDbits.RD6;
+    rotEncoder[7] = PORTDbits.RD7;
 
     encVal = (rotEncoder[0]+rotEncoder[1]*2+rotEncoder[2]*4+rotEncoder[3]*8+rotEncoder[4]*16+rotEncoder[5]*32+rotEncoder[6]*64+rotEncoder[7]*128);
     /*
@@ -341,7 +342,7 @@ int getAngle(){
         Delay10KTCYx(20);
     }*/
 
-    PORTD = encVal;
+   // PORTD = encVal;
 
     switch (encVal) {
         case 127:
