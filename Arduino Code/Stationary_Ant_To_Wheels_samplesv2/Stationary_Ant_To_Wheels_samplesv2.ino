@@ -105,7 +105,7 @@ Sensor characteristics:
 #define N180_DEG_M 1275
 #define DEFAULT_SERVO 90 
 #define STEP 2
-#define SERVO_TURN 20
+#define SERVO_TURN 50
 #define TURN_ANGLE_M_MAX 1800
 #define TURN_ANGLE_M_MIN 1200
 #define MIN_ANG 120
@@ -119,11 +119,11 @@ Sensor characteristics:
 #define RIGHT_MOTOR_PIN 9
 #define SERVO_PIN 3
 
-#define buffering 15 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
-#define sample_delay 10 //Number of edges detected before polling for value
-#define antenna_sample_size 10 //Number of samples taken before decision is made.
+#define buffering 30 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
+#define sample_delay 50 //Number of edges detected before polling for value
+#define antenna_sample_size 1 //Number of samples taken before decision is made.
 #define STOP_LEVEL_MAX 120
-#define STOP_LEVEL_MIN 50
+#define STOP_LEVEL_MIN -1
 
 //Enumerators for direction determination
 #define STOP_MOV 1
@@ -143,7 +143,7 @@ int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 0;
+boolean move_enabled = 0; //If 0 fixes antenna
 boolean toggle = 0;
 boolean second_sample_flag = 0;
 volatile int estate = LOW;
@@ -394,26 +394,26 @@ void handleAntennaReadings(){
   
 }
 
-int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t voltageReading_fall){
-    if (voltageReading_rise < STOP_LEVEL_MAX && voltageReading_rise > STOP_LEVEL_MIN){
+int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t voltageReading_fall) {
+  int diff = voltageReading_rise-voltageReading_fall;
+//  Serial.print("Diff ");
+//  Serial.print(diff);
+//  Serial.print(" ");
+    if (voltageReading_rise < STOP_LEVEL_MAX ){
       return STOP_MOV;
     } else {
-      if (voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering)) { //drive forward
-        return HOLD_ANG;
-    }
-   
-    if (voltageReading_rise < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
+      if (diff < buffering &&  diff > -1*buffering) //(voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering))  //drive forward
+      return HOLD_ANG;
+    
+    else if (diff > 0)//(voltageReading_rise < (caliset -buffering)) //turn  voltage > (caliset + buffering)
     return INC_ANG;
 
-    }
-    
-    if (voltageReading_rise > (caliset + buffering)){  //turn the other way
+    else if (diff < 0 )//(voltageReading_rise > (caliset + buffering))  //turn the other way
     return DEC_ANG;
-
-    }
   }
   return ERROR_CALC;
 }
+
 
 
 int readUS(){
@@ -576,6 +576,8 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
       }
     }
     interrupt_count_servo = 0;
+    if (current_pos_micro > MAX_POS) current_pos_micro = MAX_POS;
+    if (current_pos_micro < MIN_POS) current_pos_micro = MIN_POS;
     antenna_servo.writeMicroseconds(current_pos_micro);
     //
   } else interrupt_count_servo+=1;
