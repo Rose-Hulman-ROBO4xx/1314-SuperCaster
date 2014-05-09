@@ -140,6 +140,15 @@ Sensor characteristics:
 #define STOP_LEVEL_MAX 120
 #define STOP_LEVEL_MIN 50
 
+
+//Enumerators for direction determination
+#define STOP_MOV 1
+#define HOLD_ANG 2
+#define INC_ANG 3
+#define DEC_ANG 4
+#define ERROR_CALC -1
+
+
 //Global Variables
   //Sensors:
 boolean US_flag = 0;
@@ -190,22 +199,25 @@ int trackSpeed = 0;
 //Tracking Vars
 
 uint16_t caliset = 0;
-volatile uint16_t voltage = 0;
+volatile uint16_t voltage_1 = 0;
+volatile uint16_t voltage_2 = 0;
 volatile int edge_count = 0;
 
 int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 1;
+boolean move_enabled = 1; //0 locks antenna to default pos
 boolean toggle = 0;
+boolean second_sample_flag = 0;
 volatile int estate = LOW;
 int angle_2_casters = 180;
 Servo antenna_servo;
 boolean ant_read_flag = false;
 boolean samples_full = false;
 int num_samples_taken = 0;
-uint16_t voltageReadings[antenna_sample_size];
+uint16_t voltageReadings_1[antenna_sample_size]; //array for rising edge samples
+uint16_t voltageReadings_2[antenna_sample_size]; //array for falling edge samples
 
 void setup() {
   pinMode(KILL_PIN,OUTPUT);
@@ -637,31 +649,31 @@ void serialEvent(){
 }
 
 void handleAntennaReadings(){
-    samples_full = 0;
     int num_stop = 0;
     int num_hold = 0;
     int num_increase = 0;
     int num_decrease = 0;
     for(int i = 0; i < antenna_sample_size; i+=1){
-    if (voltageReadings[i] < STOP_LEVEL_MAX && voltageReadings[i] > STOP_LEVEL_MIN){
-      num_stop+=1;
-    } else {
-      if (voltageReadings[i] > (caliset - buffering) && voltageReadings[i] < (caliset + buffering)) { //drive forward
-        num_hold+=1;
-    }
-   
-    if (voltageReadings[i] < (caliset -buffering)){ //turn  
-    num_increase+=1;
 
-    }
-    
-    if (voltageReadings[i] > (caliset + buffering)){  //turn the other way
-    num_decrease+=1;
 
+    int determined_move = determine_direction_from_sample(voltageReadings_1[i],voltageReadings_2[i]);
+    switch(determined_move) {
+      case STOP_MOV:
+        num_stop+=1;
+        break;
+      case HOLD_ANG:
+         num_hold+=1;
+         break;
+       case INC_ANG:
+         num_increase+=1;
+         break;
+       case DEC_ANG: 
+          num_decrease+=1;
+          break;
+        default:
+          break;
     }
-  }
  }
- 
  samples_full = 0; //Data processed, reset flag, and tell interupt it can begin to fill buffer up again.
  num_samples_taken = 0;
  
@@ -672,42 +684,65 @@ void handleAntennaReadings(){
  }
  switch (case_num) {
   case 0:
-     //Serial.print("Stop Movement ");
+     Serial.print("Stop Movement ");
     break;
    case 1:
-     //Serial.print("Hold angle ");
+     Serial.print("Hold angle ");
      break;
-   case 2:
-     //Serial.print("Decrease angle ");
+   case 3:
+     Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
      break;
-   case 3:
-     //Serial.print("Increase angle ");
+   case 2:
+     Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
       break;
    default:
-     //Serial.print("Error ");
+     Serial.print("Error ");
      break;
  }
  
-//  Serial.print("In, Cal\t");
-//  Serial.print(voltage);
+//  Serial.print("In1, In2, Cal\t");
+//  Serial.print(voltage_1);
+//  Serial.print("\t");
+//  Serial.print(voltage_2);
 //  Serial.print("\t");
 //  Serial.print(caliset);
 //  Serial.print(" Position ");
-//  Serial.print(current_pos_micro);
+//  Serial.println(current_pos_micro);
+  
 //  Serial.print(" Agreed ");
-//  Serial.println(sample_array_f[case_num]);
+//  Serial.print(sample_array_f[case_num]);
 //  Serial.print(" Cast Ang ");
 //  Serial.print(angle_2_casters);
   
 //  RightPICSendSerial(angle_2_casters, STOP_SPD);
 //  LeftPICSendSerial(angle_2_casters, STOP_SPD); 
   
+}
+
+int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t voltageReading_fall) {
+  int diff = voltageReading_rise-voltageReading_fall;
+//  Serial.print("Diff ");
+//  Serial.print(diff);
+//  Serial.print(" ");
+    if (voltageReading_rise < STOP_LEVEL_MAX ){
+      return STOP_MOV;
+    } else {
+      if (diff < buffering &&  diff > -1*buffering) //(voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering))  //drive forward
+      return HOLD_ANG;
+    
+    else if (diff > 0)//(voltageReading_rise < (caliset -buffering)) //turn  voltage > (caliset + buffering)
+    return INC_ANG;
+
+    else if (diff < 0 )//(voltageReading_rise > (caliset + buffering))  //turn the other way
+    return DEC_ANG;
+  }
+  return ERROR_CALC;
 }
 
 
@@ -722,13 +757,21 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
   digitalWrite(ANT_WAVEFORM,toggle);
   toggle = toggle^1;
   edge_count+=1;
+  if (second_sample_flag && samples_full != 1) {
+   voltage_2 =  analogRead(SPEAKER_FROM_WALKIETALKIE);
+   //Serial.println("Store 2");
+   voltageReadings_2[num_samples_taken] = voltage_2;
+   num_samples_taken +=1;
+   second_sample_flag = 0;
+  }
   if (edge_count >= sample_delay*2){
     estate = !estate;
     edge_count = 0;
-    voltage = analogRead(SPEAKER_FROM_WALKIETALKIE);
+    voltage_1 = analogRead(SPEAKER_FROM_WALKIETALKIE);
     if (num_samples_taken < antenna_sample_size){
-    voltageReadings[num_samples_taken] = voltage;
-    num_samples_taken +=1;
+    voltageReadings_1[num_samples_taken] = voltage_1;
+    second_sample_flag = 1;
+    //Serial.println("Store 1");
     } else {
       samples_full = 1;
     }
@@ -748,6 +791,8 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
       }
     }
     interrupt_count_servo = 0;
+    if (current_pos_micro > MAX_POS) current_pos_micro = MAX_POS;
+    if (current_pos_micro < MIN_POS) current_pos_micro = MIN_POS;
     antenna_servo.writeMicroseconds(current_pos_micro);
     //
   } else interrupt_count_servo+=1;
