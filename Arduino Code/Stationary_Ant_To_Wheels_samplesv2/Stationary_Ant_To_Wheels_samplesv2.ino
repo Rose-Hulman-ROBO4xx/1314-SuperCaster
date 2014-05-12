@@ -307,23 +307,7 @@ void handleAntennaReadings(){
     int num_increase = 0;
     int num_decrease = 0;
     for(int i = 0; i < antenna_sample_size; i+=1){
-//    if (voltageReadings_1[i] < STOP_LEVEL_MAX && voltageReadings_1[i] > STOP_LEVEL_MIN){
-//      determine_array[0]+=1;
-//    } else {
-//      if (voltageReadings_1[i] > (caliset - buffering) && voltageReadings_1[i] < (caliset + buffering)) { //drive forward
-//        determine_array[1]+=1;
-//    }
-//   
-//    if (voltageReadings_1[i] < (caliset -buffering)){ //turn  voltage > (caliset + buffering)
-//    determine_array[2]+=1;
-//
-//    }
-//    
-//    if (voltageReadings_1[i] > (caliset + buffering)){  //turn the other way
-//    determine_array[3]+=1;
-//
-//    }
-//  }
+
 
     int determined_move = determine_direction_from_sample(voltageReadings_1[i],voltageReadings_2[i]);
     switch(determined_move) {
