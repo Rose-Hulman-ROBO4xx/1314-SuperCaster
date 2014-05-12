@@ -130,7 +130,7 @@ void main (void)
 
     //Initialize outputs
     PORTC = 0x00;
-    PORTA.RA0 = 0;
+    PORTAbits.RA0 = 1;
     //PORTD = 0x00;
 
     //Initialize PWM channels

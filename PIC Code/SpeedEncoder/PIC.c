@@ -48,8 +48,9 @@
 //#define   BRAKEPIN PORTDbits.RD2
 #define   SEGMENTS   32 
 #define   TIMER0START   64755 //triggers every .1 second
+#define TIMER0ZERO 0
 //PID controller values
-#define AERRORLIMIT 120 //in rpm, can be adjusted
+#define A_ERROR_LIMIT 120 //in rpm, can be adjusted
 #define KP	1
 #define KI	.1
 #define KD	1
@@ -61,6 +62,7 @@ void high_isr(void);
 void setMotorsVector(int,int);
 void getIR(void);
 int getAngle();
+int PIDContrl();
 
 // ============================================================
 
@@ -91,9 +93,9 @@ char line1[20];
 char line2[20];
 int uartFlag;
 
-int count=0;
+int previous_time=0;
+int previous_count = 0;
 float current_speed=0;
-int state=0;//0=black,1=white 
 
 int a_error = 0;
 int p_error = 0;
@@ -171,10 +173,16 @@ void main (void)
     //Set inital direction
     LMOTORDIRECTION = ML_Dir;
     RMOTORDIRECTION = MR_Dir;
-    
+
+    //PID Speed control/////////////
     //Open timer
     OpenTimer0( TIMER_INT_ON & T0_16BIT & T0_SOURCE_INT & T0_PS_1_128 );
-  	WriteTimer0(TIMER0START);
+    WriteTimer0(TIMER0START);
+
+    //Set RB0 as interuppt
+    INTCONbits.INT0IE = 1;
+    INTCONbits.INT0IF = 0;
+    INTCON2bits.INTEDG0 = 1;
 
     while(1){
         /*if(brakeFlag){ //Brake the motors if flag is set
@@ -188,7 +196,7 @@ void main (void)
         }
 
         getAngle();
-        getIR();
+        //ngetIR();
         
         
 
@@ -792,21 +800,7 @@ int getAngle(){
 ******************************************************************/
 void getIR(void)
 {
-    if(state == 1)
-    {
-	    if(PORTAbits.RA0 == 0){//might be backwards, supposed to be if it was white and sees black
-		    count++;
-		    state = 0;
-		}    
-	}
-	if(state == 0)
-	{
-		if(PORTAbits.RA0 == 1){
-		    count++;
-		    state = 1;
-		} 	
-	} 
-        
+    
 }	
 
 /*****************************************************************
@@ -836,9 +830,9 @@ int PIDControl(int error)
 	//get values
 	int prop = KP*error;
 	int integ = KI*a_error;
-	int deriv - KD*d_error;
+	int deriv = KD*d_error;
 	
-	output = prop + integ + deriv;
+	int output = prop + integ + deriv;
 	
 	
 	
@@ -879,9 +873,27 @@ void high_isr(void)
     if(INTCONbits.TMR0IF)// .1 seconds have past(78 ticks)
     {
 	  INTCONbits.TMR0IF = 0; 
-	  WriteTimer0(TIMERSTART);
-	  current_speed = (count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
-	  count = 0;
+	  WriteTimer0(TIMER0ZERO);
+	  current_speed = 0; //Timer overflow occured, meaing 8 seconds
+                             //elapsed without a speed read
+                  //(count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
+	  
+    }
+    if(INTCONbits.INT0IF) {
+        INTCONbits.INT0IF = 0;
+        int result = ReadTimer0();
+        WriteTimer0(TIMER0ZERO);
+        if (result < 30000 && previous_count < 30000 ) { //Ok to avrage 
+            int total_count = result+previous_count;
+            int avg_count = total_count/2;
+            current_speed = (float) avg_count * .000128;
+        } else { //Case of moving very slow, no overflow
+            current_speed = (float) result * .000128;
+        }
+        previous_count = result;
+    }
+
+
 }
 
 /******************************************************************
@@ -893,5 +905,7 @@ void high_isr(void)
 #pragma interruptlow low_isr		// declare function as low priority isr
 void low_isr(void)
 {
+
 }
+
 
