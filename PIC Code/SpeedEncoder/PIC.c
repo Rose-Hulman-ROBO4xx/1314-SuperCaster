@@ -97,9 +97,9 @@ int previous_time=0;
 int previous_count = 0;
 float current_speed=0;
 
-int a_error = 0;
-int p_error = 0;
-int d_error = 0;
+float a_error = 0;
+float p_error = 0;
+float d_error = 0;
 int PIDcount = 0;
 int Mag = 0;
 
@@ -140,12 +140,14 @@ void main (void)
             0x0E);
 
     ADCON0 = 0x01;        //Turn On ADC
-    ADCON1 = 0x0B;        //Select Vref+ = VDD, Vref- = VSS, AN0-AN3 = Analog Input
+    //ADCON1 = 0x0B;        //Select Vref+ = VDD, Vref- = VSS, AN0-AN3 = Analog Input
+    ADCON1 = 0x0F;
     ADCON2 = 0x00;
 
     //    ADCON2 = 0xA9;        //### Acquisition delay 12 TAD, A/D conversion clock 8TOSC, Right Justified
     TRISA = 0xFF;  //port A all input
-    TRISC = 0x80;  //port C RC7 is serial comm input
+    //TRISC = 0x80;  //port C RC7 is serial comm input
+    TRISC = 0x00;
     TRISB = 0xFF;  //port B all input
     TRISD = 0x00;
 
@@ -183,6 +185,9 @@ void main (void)
     INTCONbits.INT0IE = 1;
     INTCONbits.INT0IF = 0;
     INTCON2bits.INTEDG0 = 1;
+
+	XLCDInit();
+	XLCDClear();
 
     while(1){
         /*if(brakeFlag){ //Brake the motors if flag is set
@@ -251,7 +256,7 @@ void setMotorsVector(int Ang,int set_speed){
 	int error = set_speed - current_speed;
 	
 	
-	int output = PIDContrl(error);
+	float output = PIDContrl(error);
 	
 	//replace with real transfer funtion
 	int set_speed_pwm = set_speed;
@@ -812,15 +817,15 @@ void getIR(void)
 int PIDControl(int error)
 {
 	//PID variables
-	int kd = 1;
-	int ki = 1;
-	int kp = 1;
+	float kd = 1;
+	float ki = 1;
+	float kp = .5;
 	
 	PIDcount = PIDcount + 1;
 	
 	if(PIDcount > PIDTIMER){//update the integral and derivative terms
-	int a_error = a_error + error;
-	int d_error = a_error - p_error;
+	a_error = a_error + error;
+	d_error = a_error - p_error;
 	if(a_error > A_ERROR_LIMIT){
 		a_error = A_ERROR_LIMIT;
 		}	
@@ -828,11 +833,11 @@ int PIDControl(int error)
 	}
 	
 	//get values
-	int prop = KP*error;
-	int integ = KI*a_error;
-	int deriv = KD*d_error;
+	float prop = KP*error;
+	float integ = KI*a_error;
+	float deriv = KD*d_error;
 	
-	int output = prop + integ + deriv;
+	float output = prop + integ + deriv;
 	
 	
 	
@@ -891,6 +896,10 @@ void high_isr(void)
             current_speed = (float) result * .000128;
         }
         previous_count = result;
+        XLCDClear();
+        char line1[16];
+        sprintf(line1,"%d",current_speed);
+		XLCDPutRamString(line1);
     }
 
 
