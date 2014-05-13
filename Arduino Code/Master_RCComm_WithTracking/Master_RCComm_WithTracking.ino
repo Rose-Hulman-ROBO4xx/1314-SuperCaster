@@ -275,7 +275,10 @@ void setup() {
   pinMode(CALIBRATE_IN, INPUT);
   pinMode(RADIO_POWER,OUTPUT);
   pinMode(RADIO_VOL_UP,OUTPUT);
+  pinMode(RADIO_VOL_DWN,OUTPUT);
   digitalWrite(CALIBRATE_IN, HIGH);
+  
+  powerUpRadio();
 
   //Serial.println("Set Output mode");
   antenna_servo.attach(3);  // attaches the servo on pin 9 to the servo object
@@ -832,5 +835,42 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
     sensor_timer_count = 0;
     timer_flag = 1;
   } else sensor_timer_count +=1;
+}
+
+void powerUpRadio() {
+  boolean turnOn = true; //default to turn the radio on
+  digitalWrite(RADIO_VOL_UP,HIGH);
+  delay(200);
+  int testOn = analogRead(SPEAKER_FROM_WALKIETALKIE);
+  if (testOn > STOP_LEVEL_MAX){ //the radio is already on
+    turnOn = false;
+  } 
+  delay(300);
+  digitalWrite(RADIO_VOL_UP,LOW);
+  delay(500);
+  
+  if (turnOn){
+  
+  digitalWrite(RADIO_POWER,HIGH);
+  delay(1500);
+  digitalWrite(RADIO_POWER,LOW);
+  delay(1000);
+  
+  digitalWrite(RADIO_VOL_UP,HIGH);
+  delay(500);
+  digitalWrite(RADIO_VOL_UP,LOW);
+  delay(500);
+  
+  digitalWrite(RADIO_VOL_UP,HIGH);
+  delay(500);
+  digitalWrite(RADIO_VOL_UP,LOW);
+  delay(500);
+  
+  digitalWrite(RADIO_VOL_UP,HIGH);
+  delay(500);
+  digitalWrite(RADIO_VOL_UP,LOW);
+  delay(500);
+  }
+  
 }
  
