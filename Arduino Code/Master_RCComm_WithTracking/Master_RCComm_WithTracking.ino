@@ -758,9 +758,6 @@ void handleAntennaReadings(){
 
 int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t voltageReading_fall) {
   int diff = voltageReading_rise-voltageReading_fall;
-//  Serial.print("Diff ");
-//  Serial.print(diff);
-//  Serial.print(" ");
     if (voltageReading_rise < STOP_LEVEL_MAX ){
       return STOP_MOV;
     } else {
@@ -778,19 +775,12 @@ int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t volta
 
 
 
-//ISR(TIMER1_COMPA_vect){//timer1 interrupt 1Hz 
-////generates pulse wave of frequency 1Hz/2 = 0.5kHz (takes two cycles for full wave- toggle high then toggle low)
-//  
-//  timer_flag=1;
-//}
-
 ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
   digitalWrite(ANT_WAVEFORM,toggle);
   toggle = toggle^1;
   edge_count+=1;
   if (second_sample_flag && samples_full != 1) {
    voltage_2 =  analogRead(SPEAKER_FROM_WALKIETALKIE);
-   //Serial.println("Store 2");
    voltageReadings_2[num_samples_taken] = voltage_2;
    num_samples_taken +=1;
    second_sample_flag = 0;
@@ -801,8 +791,6 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
     voltage_1 = analogRead(SPEAKER_FROM_WALKIETALKIE);
     if (num_samples_taken < antenna_sample_size){
     voltageReadings_1[num_samples_taken] = voltage_1;
-    second_sample_flag = 1;
-    //Serial.println("Store 1");
     } else {
       samples_full = 1;
     }
@@ -831,7 +819,7 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
   //antenna_servo.writeMicroseconds(current_pos_micro);
   //Antenna Reading
   //Sensor Timer
-  if (sensor_timer_count == 100) {
+  if (sensor_timer_count >= 100) {
     sensor_timer_count = 0;
     timer_flag = 1;
   } else sensor_timer_count +=1;
