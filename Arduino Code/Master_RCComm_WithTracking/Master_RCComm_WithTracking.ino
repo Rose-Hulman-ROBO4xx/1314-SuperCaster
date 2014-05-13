@@ -32,17 +32,21 @@ Sensor characteristics:
 //Constants 
   //Sensors:
 #define NUM_US 8
-#define NUM_IR 4
-#define NUM_B 1
+#define NUM_IR 0
+#define NUM_B 6
 
 #define US_HIT_BUFFER 0
+#define IR_HIT_BUFFER 1
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
 #define FAR_INCHES 50    //Approx starting distance for US
 
 #define AN_CONVERT 1023/5
 
-#define IR_EDGE 0.5*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
+#define IR_VOLT 0.5
+//#define IR_VOLT_CASTER 0.55
+#define IR_EDGE IR_VOLT*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
+//#define IR_EDGE_CASTER IR_VOLT_CASTER*AN_CONVERT  //Max range in V (~4ft if perpendicular surface)
 
 #define US_CONVERT 0.0098 //(Volts/inch)
 #define CLOSE_VOLT US_CONVERT*CLOSE_INCHES  //
@@ -175,7 +179,8 @@ int B_pins[] = {BFL_PIN,BFC_PIN,BFR_PIN,BLSF_PIN,BRSF_PIN,BLSB_PIN,BRSB_PIN,BB_P
 
 float US_read[] = {0,0,0,0,0,0,0,0};
 int US_hitCount[] = {0,0,0,0,0,0,0,0};
-float IR_read[] = {0,0,0,0,0,0,0};
+float IR_read[] = {10,10,10,10,10,10,10};
+int IR_hitCount[] = {0,0,0,0,0,0,0};
 
   //Serial:
 String inputString = "";
@@ -311,13 +316,14 @@ void setup() {
   sei();//allow interrupts
   
   delay(100);
-//  Serial.print('1');
+  Serial.print('1');
 }
 
 
 void loop(){
-  //Sensor check:
-  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate 
+  //Sensor check:  
+  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate  
+  
   if(stringComplete){ 
       Ei = StringToInt(E);
       Ti = StringToInt(T);
@@ -328,7 +334,8 @@ void loop(){
       Anglei = StringToInt(Ang);
       inputString = "";
       stringComplete = false;
-  
+ 
+      
     if(Ei==0){
        killPower();
     }
@@ -346,9 +353,7 @@ void loop(){
         }
         
       if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
-        trackSpeed = Verti;
-        //TODO:  and send speed, angle to PICs
-      
+        trackSpeed = Verti;      
        
         RightPICSendSerial(angle_2_casters, trackSpeed);
         LeftPICSendSerial(angle_2_casters, trackSpeed);        
@@ -410,7 +415,7 @@ void loop(){
   
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
-  delay(1000);
+  //delay(1000);
 }
 
 void updateTrackingSensors(){ 
@@ -567,6 +572,20 @@ int readIR(){
       return i;
     }
   }
+  
+  for(i=0;i<NUM_IR;i++){ 
+     if(IR_read[i] < IR_EDGE){
+        IR_hitCount[i]++;
+     }else if(IR_read[i] > IR_EDGE){
+        IR_hitCount[i] = 0;
+     }
+      
+     if(IR_hitCount[i]>IR_HIT_BUFFER){
+        IR_hitCount[i] = IR_HIT_BUFFER+1;  //Prevent overflow by capping element size
+        IR_flag = 1;
+        return i;
+     }
+  }
   IR_flag = 0;
   return -1;
 }
@@ -581,7 +600,12 @@ void LeftPICSendSerial(int angle, int spd){
       Serial1.print(spd); 
       delay(15);
       Serial1.print('S');
+/*      Serial.print("L: ang ");
+      Serial.print(angle);
+      Serial.print('\n');
+      */
       return;
+      
 }
 //Serial communication protocol for the PIC on the right caster (T <-)
 void RightPICSendSerial(int angle, int spd){
@@ -592,6 +616,10 @@ void RightPICSendSerial(int angle, int spd){
       Serial2.print(spd); 
       delay(15);
       Serial2.print('S');
+     /* Serial.print("R: ang ");
+      Serial.print(angle);
+      Serial.print('\n');
+      */
       return;
 }
 //Takes a String representing an integer and converts it to an int
@@ -684,25 +712,25 @@ void handleAntennaReadings(){
  }
  switch (case_num) {
   case 0:
-     Serial.print("Stop Movement ");
+     //Serial.print("Stop Movement ");
     break;
    case 1:
-     Serial.print("Hold angle ");
+     //Serial.print("Hold angle ");
      break;
    case 3:
-     Serial.print("Decrease angle ");
+     //Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
      break;
    case 2:
-     Serial.print("Increase angle ");
+     //Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
       break;
    default:
-     Serial.print("Error ");
+     //Serial.print("Error ");
      break;
  }
  
