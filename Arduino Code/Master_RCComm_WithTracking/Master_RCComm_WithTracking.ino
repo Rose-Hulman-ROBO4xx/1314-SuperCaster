@@ -32,7 +32,7 @@ Sensor characteristics:
 //Constants 
   //Sensors:
 #define NUM_US 8
-#define NUM_IR 0
+#define NUM_IR 5
 #define NUM_B 6
 
 #define US_HIT_BUFFER 0
@@ -318,13 +318,17 @@ void setup() {
   TIMSK2 |= (1 << OCIE2A);
   sei();//allow interrupts
   
-  delay(100);
   Serial.print('1');
+  delay(100);
 }
+
+
 
 
 void loop(){
   //Sensor check:  
+  
+  
   Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate  
   
   if(stringComplete){ 
@@ -418,7 +422,27 @@ void loop(){
   
 void killPower(){
   digitalWrite(KILL_PIN,HIGH);
-  //delay(1000);
+  RightPICSendSerial((Anglei*0.352), STOP_SPD);
+  LeftPICSendSerial((Anglei*0.352), STOP_SPD);
+  
+  while(IR_flag){    
+    delay(200);
+    Serial.print(1);
+    Serial.print("\nIR flag: ");
+    Serial.print(IR_flag);
+    if(IR_flag){
+      Serial.print("  IR location: ");
+      Serial.print(IR_location);
+    }
+    Serial.print("\n  E stop: ");
+    Serial.print(Ei); 
+    Serial.print('\n'); 
+    
+    IR_location = readIR();
+    if((!IR_flag)&&(Ei)){
+      return;
+    }
+  }
 }
 
 void updateTrackingSensors(){ 
@@ -454,6 +478,13 @@ void updateRCSensors(){
   IR_location = readIR();
   B_location = readB();
   timer_flag = 0;      
+  
+  
+  /*delay(20);
+  Serial.print("\n IRL:");
+  Serial.print(IR_flag);
+  Serial.print("\n");*/
+  
   
   //Stop_flag = IR_flag|US_flag;
   if(IR_flag){
@@ -572,10 +603,17 @@ int readIR(){
     tempVal = analogRead(IR_pins[i]);
     if(tempVal < IR_EDGE){
       IR_flag = 1;
+      
+      //Serial.print('\n');      
+      //Serial.print(i);
+      //Serial.print('  ');
+      //Serial.print(tempVal);
+      //Serial.print("     ");
+      
       return i;
     }
   }
-  
+  /*
   for(i=0;i<NUM_IR;i++){ 
      if(IR_read[i] < IR_EDGE){
         IR_hitCount[i]++;
@@ -588,7 +626,7 @@ int readIR(){
         IR_flag = 1;
         return i;
      }
-  }
+  }*/
   IR_flag = 0;
   return -1;
 }

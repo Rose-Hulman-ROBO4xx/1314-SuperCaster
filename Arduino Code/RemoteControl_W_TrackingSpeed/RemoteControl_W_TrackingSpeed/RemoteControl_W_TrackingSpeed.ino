@@ -60,7 +60,7 @@ void setup(){
   pinMode(PIN_TRACKING_TOGGLE, INPUT_PULLUP);
   pinMode(PIN_TURN_TOGGLE, INPUT_PULLUP);
   
- RxReady = 1;
+  RxReady = 1;
 }
 
 void loop(){
@@ -76,6 +76,7 @@ void loop(){
   RxCnt++;
   if(RxCnt>RXWATCHDOG){
      RxReady = 0;
+     
   }  
     
   if(RxReady){
@@ -217,8 +218,8 @@ void serialEvent(){
   while(Serial.available()){
     char inChar = (char) Serial.read() - TEAM_NUM;
     if(inChar <= 57 && inChar >= 48){
-      RxReady = inChar-48;      
-      //RxReady = 1;
+      //RxReady = inChar-48;      
+      RxReady = 1;
       RxCnt=0;
     }
   }
