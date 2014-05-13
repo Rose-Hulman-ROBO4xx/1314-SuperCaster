@@ -1,3 +1,5 @@
+#include <Average.h>
+
 /* 
 This is the code for sensory array on timer interrupts
 Sensor characteristics:
@@ -28,6 +30,7 @@ Sensor characteristics:
 #include <stdlib.h>
 #include <Servo.h> 
 #include <EEPROM.h>
+#include <Average.h>
 
 
 //Constants 
@@ -310,9 +313,12 @@ void handleAntennaReadings(){
     int num_hold = 0;
     int num_increase = 0;
     int num_decrease = 0;
+    
+    int diff_array[antenna_sample_size] ;
     for(int i = 0; i < antenna_sample_size; i+=1){
 
-
+    int diff_array[i] = abs(voltageReadings_1[i] - voltageReadings_2[i]);
+    
     int determined_move = determine_direction_from_sample(voltageReadings_1[i],voltageReadings_2[i]);
     switch(determined_move) {
       case STOP_MOV:
@@ -331,6 +337,8 @@ void handleAntennaReadings(){
           break;
     }
  }
+ 
+ int avgDiff = mean(diff_array,antenna_sample_size);
  samples_full = 0; //Data processed, reset flag, and tell interupt it can begin to fill buffer up again.
  num_samples_taken = 0;
  
@@ -589,27 +597,27 @@ void powerUpRadio() {
   digitalWrite(RADIO_VOL_UP,LOW);
   delay(500);
   
-  if (turnOn){
+  if (turnOn)  {
   
-  digitalWrite(RADIO_POWER,HIGH);
-  delay(1500);
-  digitalWrite(RADIO_POWER,LOW);
-  delay(1000);
-  
-  digitalWrite(RADIO_VOL_UP,HIGH);
-  delay(500);
-  digitalWrite(RADIO_VOL_UP,LOW);
-  delay(500);
-  
-  digitalWrite(RADIO_VOL_UP,HIGH);
-  delay(500);
-  digitalWrite(RADIO_VOL_UP,LOW);
-  delay(500);
-  
-  digitalWrite(RADIO_VOL_UP,HIGH);
-  delay(500);
-  digitalWrite(RADIO_VOL_UP,LOW);
-  delay(500);
+    digitalWrite(RADIO_POWER,HIGH);
+    delay(1500);
+    digitalWrite(RADIO_POWER,LOW);
+    delay(1000);
+    
+    digitalWrite(RADIO_VOL_UP,HIGH);
+    delay(500);
+    digitalWrite(RADIO_VOL_UP,LOW);
+    delay(500);
+    
+    digitalWrite(RADIO_VOL_UP,HIGH);
+    delay(500);
+    digitalWrite(RADIO_VOL_UP,LOW);
+    delay(500);
+    
+    digitalWrite(RADIO_VOL_UP,HIGH);
+    delay(500);
+    digitalWrite(RADIO_VOL_UP,LOW);
+    delay(500);
   }
   
 }
