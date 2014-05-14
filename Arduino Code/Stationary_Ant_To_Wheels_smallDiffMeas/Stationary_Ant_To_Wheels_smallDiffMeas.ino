@@ -31,7 +31,7 @@ Sensor characteristics:
 #include <Servo.h> 
 #include <EEPROM.h>
 #include <Average.h>
-
+#include defines.h
 
 //Constants 
   //Sensors:
@@ -126,8 +126,11 @@ Sensor characteristics:
 #define buffering 20 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
 #define sample_delay 10 //Number of edges detected before polling for value
 #define antenna_sample_size 3 //Number of samples taken before decision is made.
+#define avgDiffCountMax 4 //number of times the antenna avg diff is outside of margins and not corrected, so antenna is flipped
+                             //Antenna is attempting to keep person inside a small avg diff
+#define DIFF_BUFFER 20
 #define STOP_LEVEL_MAX 120
-#define STOP_LEVEL_MIN -1
+#define STOP_LEVEL_MIN 0
 
 //Enumerators for direction determination
 #define STOP_MOV 1
@@ -138,9 +141,11 @@ Sensor characteristics:
 
 
 
+
 uint16_t caliset = 0;
 volatile uint16_t voltage_1 = 0;
 volatile uint16_t voltage_2 = 0;
+uint16_t avgDiffCali = 0;
 volatile int edge_count = 0;
 
 int goal_ang_micro = DEFAULT_SERVO_M;
@@ -158,7 +163,10 @@ boolean samples_full = false;
 int num_samples_taken = 0;
 uint16_t voltageReadings_1[antenna_sample_size]; //array for rising edge samples
 uint16_t voltageReadings_2[antenna_sample_size]; //array for falling edge samples
-
+int numTimesDiffIncrease = 0;
+int previousDiff = 1023;
+int previousMove = STOP_MOV;
+boolean flipAntDirection = 0;
 
 //////
 
@@ -248,6 +256,8 @@ void setup() {
   Serial.print(caliset);
   Serial.println(" If you haven't calibrated yet, you need to for it to work");
   
+  avgDiffCali = readEEPROM(1);
+  
   cli();
 //  //set timer1 interrupt
 //  TCCR1A = 0;// set entire TCCR1A register to 0
@@ -278,23 +288,6 @@ void loop(){
   
 
 
-////////ANT Stuff
-  if (digitalRead(CALIBRATE_IN) == LOW){    //if in calibrate mode, store voltage in EEPROM
-    delay(5000);
-    while(ant_read_flag == 0){
-      delay(1);
-    }
-    caliset = voltage_1;
-    byte HByte = highByte(caliset);
-    byte LByte = lowByte(caliset);
-    EEPROM.write(1, HByte);
-    EEPROM.write(2, LByte);
-    delay(5000);
-    while(1){
-      delay(1);
-    }
-  }
-  
   
   angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MIN_ANG,MAX_ANG);
   
@@ -314,10 +307,11 @@ void handleAntennaReadings(){
     int num_increase = 0;
     int num_decrease = 0;
     
-    int diff_array[antenna_sample_size] ;
+    int diff_array[antenna_sample_size];
+    
     for(int i = 0; i < antenna_sample_size; i+=1){
 
-    int diff_array[i] = abs(voltageReadings_1[i] - voltageReadings_2[i]);
+    diff_array[i] = abs(voltageReadings_1[i] - voltageReadings_2[i]);
     
     int determined_move = determine_direction_from_sample(voltageReadings_1[i],voltageReadings_2[i]);
     switch(determined_move) {
@@ -338,9 +332,23 @@ void handleAntennaReadings(){
     }
  }
  
- int avgDiff = mean(diff_array,antenna_sample_size);
+
  samples_full = 0; //Data processed, reset flag, and tell interupt it can begin to fill buffer up again.
  num_samples_taken = 0;
+ 
+  int avgDiff = mean(diff_array,antenna_sample_size);
+ if (abs(avgDiff-avgDiffCali)>DIFF_BUFFER) {
+   if(
+   if(previousMove == DEC_ANG) {
+     flipAntDirection = flipAntDirection^1;
+     if (current_pos_micro < MAX_POS)
+      goal_ang_micro = current_pos_micro + 4*SERVO_TURN;
+      else goal_ang_micro = MAX_POS; 
+   } else if (previousMove == INC_
+   
+ } 
+ 
+ 
  
  int sample_array_f[4] = {num_stop, num_hold, num_increase,num_decrease};
  char case_num = 0;
@@ -350,18 +358,22 @@ void handleAntennaReadings(){
  switch (case_num) {
   case 0:
      Serial.print("Stop Movement ");
+     previousMove = STOP_MOV;
     break;
    case 1:
      Serial.print("Hold angle ");
+     previousMove = HOLD_ANG;
      break;
    case 3:
      Serial.print("Decrease angle ");
+     previousMove = DEC_ANG;
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
      break;
    case 2:
      Serial.print("Increase angle ");
+     previousMove = INC_ANG;
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
@@ -371,12 +383,16 @@ void handleAntennaReadings(){
      break;
  }
  
-  Serial.print("In1, In2, Cal\t");
+  Serial.print("In1, In2, AvgDiff, Cal1, Cal2\t");
   Serial.print(voltage_1);
   Serial.print("\t");
   Serial.print(voltage_2);
   Serial.print("\t");
+  Serial.print(avgDiff);
+  Serial.print("\t");
   Serial.print(caliset);
+  Serial.print("\t");
+  Serial.print(avgDiffCali);
   Serial.print(" Position ");
   Serial.println(current_pos_micro);
   
@@ -401,11 +417,14 @@ int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t volta
       if (diff < buffering &&  diff > -1*buffering) //(voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering))  //drive forward
       return HOLD_ANG;
     
-    else if (diff > 0)//(voltageReading_rise < (caliset -buffering)) //turn  voltage > (caliset + buffering)
-    return INC_ANG;
+    else if (diff > 0){//(voltageReading_rise < (caliset -buffering)) //turn  voltage > (caliset + buffering)
+    if (!flipAntDirection) return INC_ANG;
+    else return DEC_ANG;
 
-    else if (diff < 0 )//(voltageReading_rise > (caliset + buffering))  //turn the other way
-    return DEC_ANG;
+    }else if (diff < 0 ){//(voltageReading_rise > (caliset + buffering))  //turn the other way
+    if (!flipAntDirection) return DEC_ANG;
+    else return INC_ANG;
+    }
   }
   return ERROR_CALC;
 }
@@ -620,5 +639,38 @@ void powerUpRadio() {
     delay(500);
   }
   
+}
+
+void calibrateAntenna(){
+  ////////ANT Stuff
+  Serial.println("Calibration Detected");
+  while(!samples_full){
+    Serial.println("Waiting for Reading...");
+    delay(100);
+  } 
+  Serial.println("Reading obtained, storing data");
+  uint16_t riseAvg = mean(voltageReadings_1,antenna_sample_size);
+  uint16_t fallAvg = mean(voltageReadings_2,antenna_sample_size);
+  avgDiffCali = abs(riseAvg-fallAvg);
+  writeEEPROM(avgDiffCali,1);
+  Serial.println("Success! Please restart robot");
+  while(1){
+    delay(100);
+  }
+}
+
+//Function writes data to location based on zero index
+void writeEEPROM(uint16_t data, int loc){
+  byte HByte = highByte(data);
+    byte LByte = lowByte(data);
+    EEPROM.write(((loc*2)+1), HByte);
+    EEPROM.write(((loc*2)+2), LByte);
+}
+
+uint16_t readEEPROM(int loc){
+  byte HByte =  EEPROM.read(((2*loc)+1));
+  byte LByte =  EEPROM.read(((2*loc)+2));
+  uint16_t data = word(HByte, LByte);
+  return data;
 }
  
