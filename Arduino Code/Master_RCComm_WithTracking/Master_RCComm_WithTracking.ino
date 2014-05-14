@@ -26,7 +26,7 @@ Sensor characteristics:
 
 //Imports
 #include <stdlib.h>
-#include <Servo.h> 
+#include <Servo.h> b
 #include <EEPROM.h>
 
 //Constants 
@@ -35,7 +35,7 @@ Sensor characteristics:
 #define NUM_IR 5
 #define NUM_B 6
 
-#define US_HIT_BUFFER 0
+#define US_HIT_BUFFER 5
 #define IR_HIT_BUFFER 1
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
@@ -124,12 +124,13 @@ Sensor characteristics:
 #define DEFAULT_SERVO_M 1275
 #define N180_DEG_M 1275
 #define DEFAULT_SERVO 90 
-#define STEP 2
-#define SERVO_TURN 20
-#define TURN_ANGLE_M_MAX 1800
-#define TURN_ANGLE_M_MIN 1200
+#define STEP 5
+#define SERVO_TURN 60
+#define TURN_ANG_MAX 210
+#define TURN_ANG_MIN 150
 #define MIN_ANG 120
 #define MAX_ANG 240
+
 
 #define SPEAKER_FROM_WALKIETALKIE A15 //set input pin
 #define CALIBRATE_IN 44
@@ -139,10 +140,10 @@ Sensor characteristics:
 #define SERVO_PIN 3
 
 #define buffering 10 //what counts as straight ahead? If too small, the robot will jitter. If too large the robot will drive away from the transmitter
-#define sample_delay 5 //Number of edges detected before polling for value
-#define antenna_sample_size 20 //Number of samples taken before decision is made.
+#define sample_delay 10 //Number of edges detected before polling for value
+#define antenna_sample_size 3  //Number of samples taken before decision is made.
 #define STOP_LEVEL_MAX 120
-#define STOP_LEVEL_MIN 50
+#define STOP_LEVEL_MIN 0
 
 
 //Enumerators for direction determination
@@ -223,6 +224,7 @@ boolean samples_full = false;
 int num_samples_taken = 0;
 uint16_t voltageReadings_1[antenna_sample_size]; //array for rising edge samples
 uint16_t voltageReadings_2[antenna_sample_size]; //array for falling edge samples
+boolean stop_drive = false;
 
 void setup() {
   pinMode(KILL_PIN,OUTPUT);
@@ -329,7 +331,9 @@ void loop(){
   //Sensor check:  
   
   
-  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate  
+  Serial.println('1'); // Tell Remote Control that master arduino is ready to communicate  
+  
+  delay(1);
   
   if(stringComplete){ 
       Ei = StringToInt(E);
@@ -345,26 +349,38 @@ void loop(){
       
     if(Ei==0){
        killPower();
+       
     }
     
     if(Si==1){    
       //Run Tracking and enable all safety sensors
-      if(timer_flag){    
+      if(timer_flag){  
         updateTrackingSensors();
       }
       
       //Antenna Readings, no caster movement, calculate tracking angle
       angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MAX_ANG,MIN_ANG);
         if(samples_full){
+          
           handleAntennaReadings();
+          
         }
         
-      if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
+      if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1) && !stop_drive){
         trackSpeed = Verti;      
+       
+       if(angle_2_casters > TURN_ANG_MAX) {//right turn
+        RightPICSendSerial(180, STOP_SPD);
+        LeftPICSendSerial(180, TURN_SPD);
+       } else if (angle_2_casters < TURN_ANG_MIN) {//turn left
+        RightPICSendSerial(180, TURN_SPD);
+        LeftPICSendSerial(180, STOP_SPD);
+       } else {
+         
        
         RightPICSendSerial(angle_2_casters, trackSpeed);
         LeftPICSendSerial(angle_2_casters, trackSpeed);        
-        
+       }
       }else{
         RightPICSendSerial(angle_2_casters, STOP_SPD);
         LeftPICSendSerial(angle_2_casters, STOP_SPD);
@@ -376,7 +392,7 @@ void loop(){
      }
       //Serial:  
       Anglei = Anglei*0.352;
-     
+      goal_ang_micro = DEFAULT_SERVO_M;
       if((!B_flag)&&(!IR_flag)&&(Ei == 1)){
         //If vert value not to extreme, and horz value is, perform an appropriate tank drive turn
         if(Verti < FWD_LIMIT){
@@ -424,9 +440,9 @@ void killPower(){
   digitalWrite(KILL_PIN,HIGH);
   RightPICSendSerial((Anglei*0.352), STOP_SPD);
   LeftPICSendSerial((Anglei*0.352), STOP_SPD);
-  
-  while(IR_flag){    
-    delay(200);
+  /*
+  while(1){    
+    delay(1000);
     Serial.print(1);
     Serial.print("\nIR flag: ");
     Serial.print(IR_flag);
@@ -435,14 +451,13 @@ void killPower(){
       Serial.print(IR_location);
     }
     Serial.print("\n  E stop: ");
-    Serial.print(Ei); 
-    Serial.print('\n'); 
+    Serial.print(Ei);  
     
     IR_location = readIR();
     if((!IR_flag)&&(Ei)){
       return;
     }
-  }
+  }*/
 }
 
 void updateTrackingSensors(){ 
@@ -527,6 +542,7 @@ int readUS(){
   }*/
   
   //Read thrid US group
+    
   if(US_grpCount == 2){
     //Read group 3
     for(i=0;i<2;i++){
@@ -589,6 +605,34 @@ int readUS(){
      if(US_hitCount[i]>US_HIT_BUFFER){
         US_hitCount[i] = US_HIT_BUFFER+1;  
         US_flag = 1;
+        
+        
+        
+        
+        
+        
+        
+        
+        
+//        Serial.print('\n');
+//        Serial.print(i);
+//        Serial.print('\n');
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         return i;
      }
   }  
@@ -754,21 +798,25 @@ void handleAntennaReadings(){
  switch (case_num) {
   case 0:
      //Serial.print("Stop Movement ");
+     stop_drive = true;
     break;
    case 1:
      //Serial.print("Hold angle ");
+     stop_drive = false;
      break;
    case 3:
      //Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
+      stop_drive = false;
      break;
    case 2:
      //Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
+      stop_drive = false;
       break;
    default:
      //Serial.print("Error ");
@@ -803,10 +851,10 @@ int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t volta
       return HOLD_ANG;
     
     else if (diff > 0)//(voltageReading_rise < (caliset -buffering)) //turn  voltage > (caliset + buffering)
-    return INC_ANG;
+    return DEC_ANG;
 
     else if (diff < 0 )//(voltageReading_rise > (caliset + buffering))  //turn the other way
-    return DEC_ANG;
+    return INC_ANG;
   }
   return ERROR_CALC;
 }
@@ -824,11 +872,13 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
    second_sample_flag = 0;
   }
   if (edge_count >= sample_delay*2){
+    
     estate = !estate;
     edge_count = 0;
     voltage_1 = analogRead(SPEAKER_FROM_WALKIETALKIE);
     if (num_samples_taken < antenna_sample_size){
     voltageReadings_1[num_samples_taken] = voltage_1;
+    second_sample_flag = 1;
     } else {
       samples_full = 1;
     }
@@ -866,12 +916,12 @@ ISR(TIMER2_COMPA_vect){//timer2 interrupt 1kHz
 void powerUpRadio() {
   boolean turnOn = true; //default to turn the radio on
   digitalWrite(RADIO_VOL_UP,HIGH);
-  delay(200);
+  delay(150);
   int testOn = analogRead(SPEAKER_FROM_WALKIETALKIE);
   if (testOn > STOP_LEVEL_MAX){ //the radio is already on
     turnOn = false;
   } 
-  delay(300);
+  delay(350);
   digitalWrite(RADIO_VOL_UP,LOW);
   delay(500);
   
