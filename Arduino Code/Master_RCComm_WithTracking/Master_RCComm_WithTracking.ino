@@ -35,7 +35,7 @@ Sensor characteristics:
 #define NUM_IR 5
 #define NUM_B 6
 
-#define US_HIT_BUFFER 0
+#define US_HIT_BUFFER 5
 #define IR_HIT_BUFFER 1
 
 #define CLOSE_INCHES 30 //Approximate stopping distance for US
@@ -424,9 +424,9 @@ void killPower(){
   digitalWrite(KILL_PIN,HIGH);
   RightPICSendSerial((Anglei*0.352), STOP_SPD);
   LeftPICSendSerial((Anglei*0.352), STOP_SPD);
-  
-  while(IR_flag){    
-    delay(200);
+  /*
+  while(1){    
+    delay(1000);
     Serial.print(1);
     Serial.print("\nIR flag: ");
     Serial.print(IR_flag);
@@ -435,14 +435,13 @@ void killPower(){
       Serial.print(IR_location);
     }
     Serial.print("\n  E stop: ");
-    Serial.print(Ei); 
-    Serial.print('\n'); 
+    Serial.print(Ei);  
     
     IR_location = readIR();
     if((!IR_flag)&&(Ei)){
       return;
     }
-  }
+  }*/
 }
 
 void updateTrackingSensors(){ 
@@ -527,6 +526,7 @@ int readUS(){
   }*/
   
   //Read thrid US group
+    
   if(US_grpCount == 2){
     //Read group 3
     for(i=0;i<2;i++){
@@ -589,6 +589,34 @@ int readUS(){
      if(US_hitCount[i]>US_HIT_BUFFER){
         US_hitCount[i] = US_HIT_BUFFER+1;  
         US_flag = 1;
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        Serial.print('\n');
+        Serial.print(i);
+        Serial.print('\n');
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         return i;
      }
   }  
