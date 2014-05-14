@@ -144,7 +144,7 @@ int goal_ang_micro = DEFAULT_SERVO_M;
 volatile boolean finished_move = 1;
 volatile int interrupt_count_servo = 0;
 volatile int current_pos_micro = N180_DEG_M;
-boolean move_enabled = 1; //If 0 fixes antenna
+boolean move_enabled = 0; //If 0 fixes antenna
 boolean toggle = 0;
 boolean second_sample_flag = 0;
 volatile int estate = LOW;
@@ -346,17 +346,18 @@ void handleAntennaReadings(){
    case 1:
      Serial.print("Hold angle ");
      break;
-   case 3:
+   case 3:  //Turn Right
      Serial.print("Decrease angle ");
-      if (current_pos_micro > MIN_POS)
-      goal_ang_micro = current_pos_micro - SERVO_TURN;
-      else current_pos_micro = MIN_POS;
+//      if (current_pos_micro > MIN_POS)
+//      goal_ang_micro = current_pos_micro - SERVO_TURN;
+//      else current_pos_micro = MIN_POS;
+     
      break;
-   case 2:
+   case 2: //Turn left
      Serial.print("Increase angle ");
-      if (current_pos_micro < MAX_POS)
-      goal_ang_micro = current_pos_micro + SERVO_TURN;
-      else goal_ang_micro = MAX_POS;
+//      if (current_pos_micro < MAX_POS)
+//      goal_ang_micro = current_pos_micro + SERVO_TURN;
+//      else goal_ang_micro = MAX_POS;
       break;
    default:
      Serial.print("Error ");
@@ -387,7 +388,7 @@ int determine_direction_from_sample(uint16_t voltageReading_rise, uint16_t volta
 //  Serial.print("Diff ");
 //  Serial.print(diff);
 //  Serial.print(" ");
-    if (voltageReading_rise < STOP_LEVEL_MAX ){
+    if (voltageReading_rise < STOP_LEVEL_MAX && voltageReading_fall < STOP_LEVEL_MAX ){
       return STOP_MOV;
     } else {
       if (diff < buffering &&  diff > -1*buffering) //(voltageReading_rise > (caliset - buffering) && voltageReading_rise < (caliset + buffering))  //drive forward
