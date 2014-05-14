@@ -61,8 +61,8 @@ void low_isr(void);
 void high_isr(void);
 void setMotorsVector(int,int);
 void getIR(void);
-int getAngle();
-int PIDContrl();
+void getAngle();
+float PIDControl();
 
 // ============================================================
 
@@ -103,6 +103,10 @@ float d_error = 0;
 int PIDcount = 0;
 int Mag = 0;
 
+unsigned int result_speed;
+unsigned int print;
+int current_pwm = 0;
+
 
 /*****************************************************************
 * Function:        void main(void)
@@ -112,6 +116,7 @@ int Mag = 0;
 void main (void)
 {
     int i = 0;
+    int j = 0;
  // configure A/D convertor
     // config 1 = Setup the timing to a conservative value (you don't need to ever change this)
     // config 2 = Use channel 0, not interrupts off, use the power and ground as referrences
@@ -150,10 +155,15 @@ void main (void)
     TRISC = 0x00;
     TRISB = 0xFF;  //port B all input
     TRISD = 0x00;
+    TRISAbits.TRISA0 = 0;
+    PORTAbits.RA0 = 1;
 
     //Initialize outputs
     PORTC = 0x00;
     PORTD = 0x00;
+    PORTB = 0x00;
+    PORTB = 0x00;
+    PORTBbits.RB0 = 1;
 
     //Initialize PWM channels
     OpenTimer2(TIMER_INT_OFF & T2_PS_1_16);
@@ -186,10 +196,22 @@ void main (void)
     INTCONbits.INT0IF = 0;
     INTCON2bits.INTEDG0 = 1;
 
-	XLCDInit();
-	XLCDClear();
+    //XLCDInit();			//initialize the LCD module
+
 
     while(1){
+//        if(j > 100){
+//            XLCDClear();
+//            XLCDL1home();
+//            //sprintf(line1,"%d",result_speed);
+//            //XLCDPutRamString(line1);
+//            //XLCDL2home();
+//            sprintf(line2,"%d",print);
+//            XLCDPutRamString(line2);
+//            j = 0;
+//            setMotorsVector(180,32);
+//        }
+        
         /*if(brakeFlag){ //Brake the motors if flag is set
             BRAKEPIN = 1;
         }else*/
@@ -204,6 +226,7 @@ void main (void)
         //ngetIR();
         
         
+        
 
         if(uartFlag == 1){
             i = 0; //feed watchdog
@@ -214,6 +237,7 @@ void main (void)
             setMotorsVector(rxAngle,rxSpeed);
         }
         i++;
+        j++;
         //PIC Serial loopback test
         /*if(PORTAbits.RA4 ==0){
             printf("%i",5);
@@ -221,6 +245,7 @@ void main (void)
             printf("%i",10);
             printf("%c",'S');
         }*/
+
     }
 }
 
@@ -252,23 +277,45 @@ void setMotorsVector(int Ang,int set_speed){
 	
 	
 	//PID control
-	//set_speed comes in as rpm
-	int error = set_speed - current_speed;
+	//set_speed comes in as 0-1023
+        float set_speed_tps = set_speed*(32/1023);//convert to ticks/second
+	float error = set_speed_tps - current_speed;
 	
 	
-	float output = PIDContrl(error);
+	float delta_tps = PIDControl(error);//delta from controller
 	
-	//replace with real transfer funtion
-	int set_speed_pwm = set_speed;
-	int output_pwm = output; 
-	
+	//replace with real transfer funtion(close enough)
+        //pwm 0-512, edges/s 0-32 = 0-1 rev/s
+	int set_speed_pwm = set_speed*(512/32);
+	float delta_pwm = delta_tps*(512/32);
+
+        if(delta_pwm > 512){//to stop possible overflow in current_pwm
+            delta_pwm = 512;
+        }
+        if(delta_pwm < -512){
+            delta_pwm = -512;
+        }
+
 	//use this when using PID
-	//Mag = Mag + output_pwm;
-	//use this for no PID but arduino sending down RPM values
-	Mag = set_speed_pwm;
+	current_pwm = current_pwm + (int) delta_pwm;
+	//use this for no PID but arduino sending down TPS values
+	//Mag = set_speed_pwm;
 	//use this with arduino sending down pwm values
-	Mag = set_speed;
-	
+	//Mag = set_speed;
+
+        if(current_pwm > 512){//limit the values for the pwm
+            current_pwm = 512;
+        }
+        if(current_pwm < 0){
+            current_pwm = 0;
+        }
+        print = current_pwm;
+
+        Mag = current_pwm;
+
+        if(set_speed == 0){//dont use the control loop for full stop
+            Mag = 0;
+        }
     //Center possible analog values around 0 [(0,1024) to (-512, 512)]
     Mag = Mag - JHALF;
     //Spread Mag to from (-512, 512) to (-1024, 1024) (For PWM duty cycle)
@@ -371,7 +418,7 @@ void setMotorsVector(int Ang,int set_speed){
     return;
 }
 
-int getAngle(){
+void getAngle(){
     int i = 0;
     int encVal = 0;
     int angle =0;
@@ -794,7 +841,6 @@ int getAngle(){
     angle = (int) pos*(2.8345); //  2.8345 = 360/127
     currAng = angle;
 
-    return angle;
 }
 
 /*****************************************************************
@@ -814,35 +860,36 @@ void getIR(void)
 * Output:	int output, speed to set the motors at
 * Overview: Reads the IR sensor and increments the count
 ******************************************************************/
-int PIDControl(int error)
+float PIDControl(float error)
 {
 	//PID variables
-	float kd = 1;
-	float ki = 1;
-	float kp = .5;
-	
+	float kd = 0;
+	float ki = 0;
+	float kp = .01;
+
+        float prop_1,integ_1,deriv_1,output;
 	PIDcount = PIDcount + 1;
 	
 	if(PIDcount > PIDTIMER){//update the integral and derivative terms
-	a_error = a_error + error;
-	d_error = a_error - p_error;
-	if(a_error > A_ERROR_LIMIT){
-		a_error = A_ERROR_LIMIT;
-		}	
-	PIDcount = 0;
+            a_error = a_error + error;
+            d_error = a_error - p_error;
+            if(a_error > A_ERROR_LIMIT){
+                a_error = A_ERROR_LIMIT;
+            }
+            PIDcount = 0;
 	}
 	
 	//get values
-	float prop = KP*error;
-	float integ = KI*a_error;
-	float deriv = KD*d_error;
-	
-	float output = prop + integ + deriv;
+	prop_1 = kp * error;
+	integ_1 = ki * a_error;
+        deriv_1 = kd * d_error;
+
+	output = prop_1 + integ_1 + deriv_1;
 	
 	
 	
 	p_error = error;
-	return output;	
+	return output;
 }
 	
 /*****************************************************************
@@ -875,31 +922,34 @@ void high_isr(void)
             lastVal = lastVal*10 +(newByte-48);
         }
     }
-    if(INTCONbits.TMR0IF)// .1 seconds have past(78 ticks)
+    if(INTCONbits.TMR0IF)
     {
 	  INTCONbits.TMR0IF = 0; 
 	  WriteTimer0(TIMER0ZERO);
 	  current_speed = 0; //Timer overflow occured, meaing 8 seconds
                              //elapsed without a speed read
                   //(count/SEGMENTS)/(.00166);//gives rpm .00166 is .1sec in min
+
 	  
     }
     if(INTCONbits.INT0IF) {
+        unsigned int result;
+        int read = PORTBbits.RB0;
+
         INTCONbits.INT0IF = 0;
-        int result = ReadTimer0();
+        result = ReadTimer0();
+
         WriteTimer0(TIMER0ZERO);
         if (result < 30000 && previous_count < 30000 ) { //Ok to avrage 
             int total_count = result+previous_count;
             int avg_count = total_count/2;
-            current_speed = (float) avg_count * .000128;
+            current_speed = 1.0/((float) avg_count * (float) 0.000128);
         } else { //Case of moving very slow, no overflow
-            current_speed = (float) result * .000128;
+            current_speed = 1.0/((float) result * (float) 0.000128);
         }
         previous_count = result;
-        XLCDClear();
-        char line1[16];
-        sprintf(line1,"%d",current_speed);
-		XLCDPutRamString(line1);
+        result_speed = (int) current_speed;
+        
     }
 
 
