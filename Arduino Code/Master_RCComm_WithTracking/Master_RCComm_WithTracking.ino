@@ -224,7 +224,7 @@ boolean samples_full = false;
 int num_samples_taken = 0;
 uint16_t voltageReadings_1[antenna_sample_size]; //array for rising edge samples
 uint16_t voltageReadings_2[antenna_sample_size]; //array for falling edge samples
-boolean stop_drive = false;
+boolean drive_command = STOP_MOV;
 
 void setup() {
   pinMode(KILL_PIN,OUTPUT);
@@ -331,8 +331,7 @@ void loop(){
   //Sensor check:  
   
   
-  Serial.println('1'); // Tell Remote Control that master arduino is ready to communicate  
-  
+  Serial.print('1'); // Tell Remote Control that master arduino is ready to communicate 
   delay(1);
   
   if(stringComplete){ 
@@ -361,30 +360,45 @@ void loop(){
       //Antenna Readings, no caster movement, calculate tracking angle
       angle_2_casters = map(current_pos_micro,MIN_POS,MAX_POS,MAX_ANG,MIN_ANG);
         if(samples_full){
-          
+          if(Ti) move_enabled = 1;
+          else move_enabled = 0;
           handleAntennaReadings();
-          
+          if(!Ti) {current_pos_micro = DEFAULT_SERVO_M;
+          goal_ang_micro = DEFAULT_SERVO_M;}
         }
         
-      if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1) && !stop_drive){
+      if((!B_flag)&&(!US_flag)&&(!IR_flag)&&(Ei==1)){
         trackSpeed = Verti;      
        
-       if(angle_2_casters > TURN_ANG_MAX) {//right turn
-        RightPICSendSerial(180, STOP_SPD);
-        LeftPICSendSerial(180, TURN_SPD);
-       } else if (angle_2_casters < TURN_ANG_MIN) {//turn left
-        RightPICSendSerial(180, TURN_SPD);
-        LeftPICSendSerial(180, STOP_SPD);
-       } else {
-         
+       if (Ti) {
+       //Strafe
        
         RightPICSendSerial(angle_2_casters, trackSpeed);
-        LeftPICSendSerial(angle_2_casters, trackSpeed);        
+        LeftPICSendSerial(angle_2_casters, trackSpeed);
+       }  else {
+         
+         if(drive_command == DEC_ANG) {//right turn
+      // Serial.println("R");
+        RightPICSendSerial(180, STOP_SPD);
+        LeftPICSendSerial(180, trackSpeed);
+       } else if (drive_command == INC_ANG) {//turn left
+     //  Serial.println("L");
+        RightPICSendSerial(180, trackSpeed);
+        LeftPICSendSerial(180, STOP_SPD);
+       } else if(drive_command == HOLD_ANG) {
+       //  Serial.println("H");
+        RightPICSendSerial(180, trackSpeed);
+        LeftPICSendSerial(180, trackSpeed);        
+       } else {
+         RightPICSendSerial(angle_2_casters, STOP_SPD);
+        LeftPICSendSerial(angle_2_casters, STOP_SPD);
        }
+       }      
       }else{
         RightPICSendSerial(angle_2_casters, STOP_SPD);
         LeftPICSendSerial(angle_2_casters, STOP_SPD);
       }
+      
       
    }else{ //Si is 0, go into remote control, only checking bump and cliff sensors       
      if(timer_flag){
@@ -798,25 +812,25 @@ void handleAntennaReadings(){
  switch (case_num) {
   case 0:
      //Serial.print("Stop Movement ");
-     stop_drive = true;
+     drive_command = STOP_MOV;
     break;
    case 1:
      //Serial.print("Hold angle ");
-     stop_drive = false;
+     drive_command = HOLD_ANG;
      break;
    case 3:
      //Serial.print("Decrease angle ");
       if (current_pos_micro > MIN_POS)
       goal_ang_micro = current_pos_micro - SERVO_TURN;
       else current_pos_micro = MIN_POS;
-      stop_drive = false;
+      drive_command = DEC_ANG;
      break;
    case 2:
      //Serial.print("Increase angle ");
       if (current_pos_micro < MAX_POS)
       goal_ang_micro = current_pos_micro + SERVO_TURN;
       else goal_ang_micro = MAX_POS;
-      stop_drive = false;
+      drive_command = INC_ANG;
       break;
    default:
      //Serial.print("Error ");

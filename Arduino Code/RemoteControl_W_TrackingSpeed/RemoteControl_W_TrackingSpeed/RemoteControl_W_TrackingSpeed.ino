@@ -111,7 +111,7 @@ void loop(){
         sendChar('E');
         sendOneNumber(Tracking);    
         sendChar('S');
-        sendOneNumber(0);
+        sendOneNumber(Turn);
         sendChar('T');
         sendNumber(512);
         sendChar('H');
